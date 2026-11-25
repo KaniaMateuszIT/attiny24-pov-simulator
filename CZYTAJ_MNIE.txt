@@ -1,0 +1,61 @@
+SYMULATOR ATtiny24 - STANOWISKO LTM (wyświetlacz POV)
+======================================================
+
+Uruchomienie
+------------
+1. Kliknij dwukrotnie plik  Symulator.bat
+2. Otworzy się okno konsoli (serwer symulatora) i przeglądarka z adresem
+   http://localhost:8024/  (jeśli przeglądarka się nie otworzy - wpisz ten adres ręcznie).
+3. Zamknięcie okna konsoli wyłącza symulator.
+
+Wymagania: Windows 10/11 i przeglądarka Edge albo Chrome. Nic nie trzeba instalować -
+kompilator avr-gcc 7.3.0 (ten sam, którego używa PlatformIO) i biblioteka Arduino dla ATtiny
+są w folderze symulatora.
+
+Co potrafi
+----------
+- Programy w C/C++ (jak w PlatformIO: Arduino.h, setup/loop albo własne main) oraz w BASCOM-AVR.
+- Prawdziwa kompilacja (te same flagi co PlatformIO - plik .hex jest identyczny jak na zajęciach)
+  i „wgrywanie” przez symulowany USBasp z komunikatami avrdude.
+- Emulacja ATtiny24 instrukcja po instrukcji z dokładnością do cyklu zegara: porty, pull-upy,
+  Timer0/Timer1 (wszystkie tryby, PWM), INT0, PCINT, watchdog, EEPROM, uśpienie, CLKPR, fusebity.
+- Model stanowiska: 16 diod na dwóch ramionach (Led1/T1 czerwone, Led2/T2 zielone), tranzystory
+  BS170, fotodioda na PB2, silnik z bezwładnością, obraz POV taki, jak widzi go oko.
+- Debuger: pauza, krok linii (F10), krok instrukcji (F11), pułapki (kliknij numer linii),
+  rejestry z nazwami bitów, zmienne, mapa RAM i stosu, EEPROM, listing asemblera.
+- Analizator stanów logicznych wszystkich pinów + kanał „w przerwaniu”.
+- Zakładka „Wykorzystanie”: jaka część czasu procesora idzie na program główny, przerwania,
+  czekanie w delay()/millis() i uśpienie, z podziałem na funkcje i linie programu
+  (dokładnie, z liczenia cykli każdej instrukcji).
+- Schemat stanowiska z kolorami stanów logicznych na żywo.
+- Diagnostyka typowych błędów (brak ISR, stos na zmiennych, watchdog, pull-up zamiast wyjścia,
+  zły F_CPU, długie przerwania...) i podpowiedzi do błędów kompilacji po polsku.
+- Przykłady: podstawowe programy w C++ i BASCOM-ie (miganie, licznik, fala, fotodioda).
+
+Skróty: F5 wgraj, F7 kompiluj, F8 pauza/wznów, F10 krok linii, F11 krok instrukcji, Ctrl+S zapisz.
+
+Foldery
+-------
+  Symulator.bat      - uruchomienie
+  aplikacja\         - interfejs (HTML/JS); aplikacja\js\avr.js to emulator ATtiny24
+  aplikacja\przyklady\ - przykładowe programy (.cpp, .bas) - można je otwierać i zmieniać
+  kompilator\        - avr-gcc 7.3.0 (okrojony do ATtiny24)
+  arduino\           - nagłówki i skompilowana biblioteka Arduino dla ATtiny (jak w PlatformIO)
+  serwer\serwer.ps1  - lokalny serwer (PowerShell) - podaje stronę i uruchamia kompilator
+
+Program w edytorze, stan układu (wgrany program, EEPROM, fusebity) i ustawienia są pamiętane
+w przeglądarce między uruchomieniami.
+
+Gdy coś nie działa
+------------------
+- „Brak serwera” - symulator otwarto bez Symulator.bat albo okno konsoli zostało zamknięte.
+- Port zajęty - serwer sam szuka wolnego portu (8024-8043); adres jest wypisany w oknie konsoli.
+- Nie przenoś folderu do ścieżki z polskimi literami (avr-gcc 7 ich nie obsługuje).
+- Symulacja wolniejsza niż czas rzeczywisty (widać to u góry: „symulacja 0,6×”) - słabszy
+  komputer albo laptop na baterii. Obraz POV jest nadal poprawny, tylko płynie wolniej.
+
+Różnice względem prawdziwego stanowiska
+---------------------------------------
+- ADC, komparator analogowy i USI są uproszczone (stanowisko z nich nie korzysta).
+- BASCOM: obsługiwany jest podzbiór języka (lista w zakładce Pomoc); parametry Sub/Function są
+  domyślnie przekazywane przez wartość (dla referencji trzeba napisać Byref); brak String i Print.

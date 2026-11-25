@@ -1,0 +1,10 @@
+[
+  {"file": "01_miganie.cpp", "lang": "cpp", "group": "C++ – podstawy", "title": "Miganie jedną diodą", "motor": false},
+  {"file": "02_licznik.cpp", "lang": "cpp", "group": "C++ – podstawy", "title": "Licznik binarny", "motor": false},
+  {"file": "03_fala.cpp", "lang": "cpp", "group": "C++ – podstawy", "title": "Pływające światło (fala)", "motor": true},
+  {"file": "04_fotodioda.cpp", "lang": "cpp", "group": "C++ – podstawy", "title": "Fotodioda – błysk przy znaczniku", "motor": true},
+  {"file": "b01_miganie.bas", "lang": "bas", "group": "BASCOM – podstawy", "title": "Miganie jedną diodą", "motor": false},
+  {"file": "b02_licznik.bas", "lang": "bas", "group": "BASCOM – podstawy", "title": "Licznik binarny", "motor": false},
+  {"file": "b03_fala.bas", "lang": "bas", "group": "BASCOM – podstawy", "title": "Pływające światło (fala)", "motor": true},
+  {"file": "b04_fotodioda.bas", "lang": "bas", "group": "BASCOM – podstawy", "title": "Fotodioda – błysk przy znaczniku", "motor": true}
+]

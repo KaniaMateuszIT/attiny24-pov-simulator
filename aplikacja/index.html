@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Symulator ATtiny24 – stanowisko LTM</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23121722' stroke='%233ec7ff' stroke-width='2'/%3E%3Cpath d='M16 4a12 12 0 0 1 12 12' stroke='%2345d483' stroke-width='3' fill='none'/%3E%3Cpath d='M4 16a12 12 0 0 1 6-10' stroke='%23ff5f5f' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="brand"><span class="chip-ico"></span><b>ATtiny24</b><span class="sub">symulator stanowiska LTM</span></div>
+  <div class="seg" id="langSeg" title="Język programu">
+    <button data-lang="cpp">C / C++</button><button data-lang="bas">BASCOM</button>
+  </div>
+  <select id="examples" class="btn" title="Przykładowe programy"></select>
+  <button id="btnNew" class="btn" title="Nowy program (szablon)">Nowy</button>
+  <button id="btnOpen" class="btn" title="Otwórz plik z dysku (.cpp, .bas)">Otwórz…</button>
+  <button id="btnSave" class="btn" title="Zapisz program na dysk (Ctrl+S)">Zapisz…</button>
+  <input type="file" id="fileInput" accept=".cpp,.c,.ino,.h,.bas,.txt" hidden>
+  <div class="sep"></div>
+  <button id="btnCompile" class="btn" title="Skompiluj bez wgrywania">Kompiluj<kbd>F7</kbd></button>
+  <button id="btnUpload" class="btn primary" title="Skompiluj i wgraj do mikrokontrolera przez USBasp">Wgraj<kbd>F5</kbd></button>
+  <div class="mem" title="Zajętość pamięci ostatnio skompilowanego programu">
+    <div class="bar" id="flashBar"><i></i><span>Flash –</span></div>
+    <div class="bar" id="ramBar"><i></i><span>RAM –</span></div>
+  </div>
+  <div class="spacer"></div>
+  <div class="status" id="status">Uruchamianie…</div>
+</header>
+
+<main class="layout">
+  <section class="col col-left" id="colLeft">
+    <div class="pane editor-pane">
+      <div class="pane-head">
+        <span class="file" id="fileName">main.cpp</span><span class="dirty" id="dirty"></span>
+        <span class="spacer"></span>
+        <span id="modeInfo"></span>
+        <span id="cursorPos">1:1</span>
+      </div>
+      <div id="editor"></div>
+    </div>
+    <div class="splitter h" data-split="leftBottom"></div>
+    <div class="pane bottom-left" id="leftBottom">
+      <div class="tabs" data-tabs="left">
+        <button data-tab="console" class="on">Konsola</button>
+        <button data-tab="problems">Problemy<span class="cnt" id="probCount"></span></button>
+        <button data-tab="ccode" id="tabCcode">Kod C z BASIC-a</button>
+        <button data-tab="asm">Asembler</button>
+        <span class="spacer"></span>
+        <button data-act="clearConsole" title="Wyczyść konsolę">⌫</button>
+      </div>
+      <div class="tab-body on" data-body="console"><div id="console"></div></div>
+      <div class="tab-body" data-body="problems"><ul class="problems" id="problems"></ul></div>
+      <div class="tab-body flex" data-body="ccode"><div id="ccode" style="flex:1;min-height:0"></div></div>
+      <div class="tab-body" data-body="asm"><div class="asm" id="asm"></div></div>
+    </div>
+  </section>
+
+  <div class="splitter v" data-split="colLeft"></div>
+
+  <section class="col col-right">
+    <div class="pane stand-pane">
+      <div class="stand-toolbar">
+        <button class="btn sm" id="btnRun" title="Pauza / wznów symulację (F8)">⏸ Pauza</button>
+        <button class="btn sm" id="btnStep" title="Wykonaj jedną instrukcję maszynową (F11)">Krok</button>
+        <button class="btn sm" id="btnStepLine" title="Wykonuj do następnej linii programu (F10)">Krok linii</button>
+        <div class="sep"></div>
+        <span class="lbl">Tempo:</span>
+        <div class="seg" id="speedSeg">
+          <button data-speed="1">1×</button><button data-speed="0.1">1/10</button><button data-speed="0.01">1/100</button><button data-speed="0.001">1/1000</button>
+        </div>
+        <div class="sep"></div>
+        <span class="time" id="simTime">t = 0,000 s</span>
+        <span class="spacer"></span>
+        <span class="lbl" id="simLoad"></span>
+      </div>
+      <div class="stand-area">
+        <div class="stand-canvas" id="standBox">
+          <canvas id="standCanvas"></canvas>
+          <div class="hud" id="hud"></div>
+          <div class="hud2" id="hud2"></div>
+        </div>
+        <aside class="stand-side">
+          <h4>Zasilanie i programator</h4>
+          <div class="ctl"><label>Zasilanie płytki</label><label class="switch"><input type="checkbox" id="power" checked><span></span></label></div>
+          <div class="ctl"><button class="btn sm" id="btnReset" style="flex:1" title="Przycisk RESET na płytce (pin PB3)">Reset</button></div>
+          <label class="chk" title="Odłącz, aby zobaczyć błąd avrdude jak na zajęciach"><input type="checkbox" id="usbasp" checked> USBasp podłączony</label>
+
+          <h4>Silnik talerza</h4>
+          <div class="ctl"><label>Silnik</label><label class="switch"><input type="checkbox" id="motor"><span></span></label></div>
+          <div class="ctl col"><div class="row"><span>Obroty</span><span class="val" id="rpsVal"></span></div><input type="range" id="rps" min="0" max="40" step="0.1" value="15"></div>
+          <div class="ctl col"><div class="row"><span>Nierównomierność</span><span class="val" id="jitterVal"></span></div><input type="range" id="jitter" min="0" max="0.1" step="0.002" value="0"></div>
+          <div class="ctl col"><span>Kierunek obrotu</span>
+            <select id="direction"><option value="1">zgodnie ze wskazówkami zegara</option><option value="-1">przeciwnie do wskazówek</option></select></div>
+
+          <h4>Fotodioda (PB2)</h4>
+          <label class="chk" title="Zbocze sygnału z fotodiody drga przez ~30 µs"><input type="checkbox" id="bounce"> Drgania zbocza</label>
+          <label class="chk"><input type="checkbox" id="blocked"> Zasłoń / odłącz czujnik</label>
+          <div class="ctl col"><div class="row"><span>Szerokość znacznika</span><span class="val" id="widthVal"></span></div><input type="range" id="sensorWidth" min="1" max="30" step="1" value="4"></div>
+
+          <h4>Widok</h4>
+          <div class="ctl col"><div class="row"><span title="Jak długo oko „pamięta” światło diody">Bezwładność oka</span><span class="val" id="expVal"></span></div><input type="range" id="exposure" min="0" max="1" step="0.01" value="0.35"></div>
+          <label class="chk"><input type="checkbox" id="showBoard" checked> Pokaż płytkę</label>
+          <label class="chk" title="Oświetlenie błyskowe - widać ramię mimo szybkich obrotów"><input type="checkbox" id="strobe"> Stroboskop (zatrzymaj ramię)</label>
+          <button class="btn sm" id="btnClearPov" style="width:100%;margin-top:4px">Wyczyść obraz</button>
+
+          <h4>Budowa stanowiska</h4>
+          <label class="chk"><input type="checkbox" id="pa0Inner" checked> PA0 przy środku płytki</label>
+          <label class="chk"><input type="checkbox" id="redOpposite" checked> Gałęzie Led1/Led2 na przeciwnych ramionach</label>
+          <div class="ctl col"><span>Kolory gałęzi</span>
+            <select id="colors"><option value="rg">Led1 (T1) czerwone, Led2 (T2) zielone</option><option value="gr">Led1 zielone, Led2 czerwone</option><option value="ww">obie białe</option></select></div>
+        </aside>
+      </div>
+    </div>
+    <div class="splitter h" data-split="rightBottom"></div>
+    <div class="pane bottom-right" id="rightBottom">
+      <div class="tabs" data-tabs="right">
+        <button data-tab="schem" class="on">Schemat</button>
+        <button data-tab="regs">Rejestry</button>
+        <button data-tab="mem">Zmienne i pamięć</button>
+        <button data-tab="analyzer">Analizator</button>
+        <button data-tab="cpu">Wykorzystanie</button>
+        <button data-tab="fuses">Fusebity</button>
+        <button data-tab="help">Pomoc</button>
+      </div>
+      <div class="tab-body on" data-body="schem" id="tab-schem"></div>
+      <div class="tab-body" data-body="regs"><div class="regs" id="regs"></div></div>
+      <div class="tab-body" data-body="mem"><div class="mempane" id="mem"></div></div>
+      <div class="tab-body flex" data-body="analyzer" id="tab-analyzer"></div>
+      <div class="tab-body" data-body="cpu"><div class="cpuuse" id="cpuuse"></div></div>
+      <div class="tab-body" data-body="fuses"><div class="fuses" id="fuses"></div></div>
+      <div class="tab-body" data-body="help">
+        <div class="help">
+          <h3>Szybki start</h3>
+          <ol>
+            <li>Wybierz przykład z listy u góry albo napisz własny program (język: <b>C / C++</b> jak w PlatformIO albo <b>BASCOM</b> jak w skrypcie do zajęć).</li>
+            <li>Kliknij <b>Wgraj</b> (F5) – program jest kompilowany prawdziwym kompilatorem avr-gcc 7.3.0 (tym samym, którego używa PlatformIO) i „wgrywany” do symulowanego ATtiny24.</li>
+            <li>Włącz <b>silnik</b> w panelu po prawej, żeby talerz się kręcił – zobaczysz obraz POV tak, jak widzi go oko.</li>
+            <li>Zatrzymuj program (F8), wykonuj go krokami (F10 / F11), ustawiaj pułapki (kliknij numer linii) i podglądaj rejestry, zmienne oraz przebiegi na pinach.</li>
+          </ol>
+
+          <h3>Stanowisko</h3>
+          <table>
+            <tr><th>Pin</th><th>Nr</th><th>Podłączenie</th></tr>
+            <tr><td><code>PA0…PA7</code></td><td>13…6</td><td>anody diod; każda linia ma dwie diody: LED1x w gałęzi Led1 i LED2x w gałęzi Led2 (katody przez 1 kΩ)</td></tr>
+            <tr><td><code>PB0</code></td><td>2</td><td>bramka T1 (BS170) – włącza gałąź <b>Led1</b> (czerwone ramię)</td></tr>
+            <tr><td><code>PB1</code></td><td>3</td><td>bramka T2 (BS170) – włącza gałąź <b>Led2</b> (zielone ramię)</td></tr>
+            <tr><td><code>PB2</code></td><td>5</td><td>fotodioda z rezystorem RD 1 kΩ do VCC; <b>stan niski = wykrycie znacznika</b>; to też wejście przerwania <code>INT0</code></td></tr>
+            <tr><td><code>PB3</code></td><td>4</td><td>RESET (rezystor 1 kΩ do VCC, przycisk do masy)</td></tr>
+          </table>
+          <p>Dioda świeci, gdy na jej linii PAx jest stan wysoki <b>i</b> tranzystor jej gałęzi przewodzi. Gałęzie leżą na przeciwnych ramionach wirującej płytki, PA0 przy środku. Zegar: wewnętrzny RC 8 MHz (fusebity <code>L:E2 H:D7 E:FF</code>).</p>
+
+          <h3>Debugowanie</h3>
+          <ul>
+            <li><b>Pułapka (breakpoint)</b> – kliknij numer linii w edytorze. Program zatrzyma się, zanim wykona tę linię.</li>
+            <li><b>Krok linii</b> (F10) – wykonuje program do następnej linii Twojego kodu; <b>Krok</b> (F11) – jedną instrukcję maszynową (zakładka Asembler).</li>
+            <li><b>Tempo</b> – zwolnij symulację (1/100, 1/1000), żeby zobaczyć, jak ramię „maluje” obraz kolumna po kolumnie.</li>
+            <li><b>Rejestry</b> – rejestry procesora i I/O z nazwami bitów. <b>Zmienne i pamięć</b> – wartości zmiennych globalnych, mapa RAM (dane, stos), EEPROM.</li>
+            <li><b>Analizator</b> – przebiegi czasowe wszystkich pinów i kanał „w przerwaniu”. Przeciągnij myszą, żeby zmierzyć czas.</li>
+            <li><b>Schemat</b> – kolory przewodów pokazują stan: czerwony = 1, niebieski = 0, pomarańczowy przerywany = pull-up, szary przerywany = pin pływający.</li>
+          </ul>
+
+          <h3>Typowe pułapki ATtiny24</h3>
+          <ul>
+            <li>Tylko <b>2 KB flash i 128 B RAM</b> – duże tablice stałych trzymaj we flashu (<code>const … PROGMEM</code> + <code>pgm_read_byte</code>). Stos rośnie w dół od 0xDF i może wejść na zmienne.</li>
+            <li>Wektory przerwań: <code>INT0_vect</code>, <code>PCINT0_vect</code>, <code>PCINT1_vect</code>, <code>WDT_vect</code>, <code>TIM1_CAPT_vect</code>, <code>TIM1_COMPA_vect</code>, <code>TIM1_COMPB_vect</code>, <code>TIM1_OVF_vect</code>, <code>TIM0_COMPA_vect</code>, <code>TIM0_COMPB_vect</code>, <code>TIM0_OVF_vect</code>. Włączone przerwanie bez ISR = restart programu.</li>
+            <li>Zmienne zmieniane w przerwaniu muszą być <code>volatile</code>; zmienne wielobajtowe czytaj z wyłączonymi przerwaniami (<code>cli()</code> … <code>sei()</code>).</li>
+            <li>Numery pinów Arduino w rdzeniu ATtiny są „odwrócone” (pin 0 = PB0, pin 3 = PA7, pin 10 = PA0) – dlatego na zajęciach używa się rejestrów <code>DDRx</code>, <code>PORTx</code>, <code>PINx</code>.</li>
+            <li>Pin ustawiony jako wejście z <code>PORTx = 1</code> ma włączony pull-up – dioda na nim świeci bardzo słabo.</li>
+            <li>W przerwaniu nie działa <code>delay()</code> ani <code>millis()</code> (przerwania są wtedy wyłączone).</li>
+            <li>Zapis jedynki do <code>PINx</code> przełącza bit w <code>PORTx</code> (<code>PINA = _BV(PA0)</code> zmienia stan PA0).</li>
+          </ul>
+
+          <h3>BASCOM-AVR w symulatorze</h3>
+          <p>Program w BASIC-u jest tłumaczony na C (zakładka „Kod C z BASIC-a”) i kompilowany avr-gcc. Obsługiwany jest podzbiór języka:</p>
+          <div class="cols">
+            <p><code>$regfile</code>, <code>$crystal</code>, <code>$hwstack</code> …<br>
+            <code>Dim … As Bit|Byte|Integer|Word|Long|Dword|Single</code>, tablice <code>Dim T(10) As Byte</code> (indeks od 1)<br>
+            <code>Const</code>, <code>Alias</code> (np. <code>Led Alias Portb.0</code>)<br>
+            <code>Config Porta = Output</code>, <code>Config Portb.0 = Output</code>, <code>Config Portb = &amp;B00001011</code><br>
+            <code>Config Timer0|Timer1 = Timer|Pwm|Counter, Prescale = …, Clear Timer = 1, Compare A = …</code><br>
+            <code>Config Int0 = Falling|Rising|Change|Low Level</code>, <code>Config Watchdog = 16…8192</code>, <code>Config Adc</code><br>
+            <code>On Int0|Timer0|Timer1|Compare1a|Compare1b|Compare0a|Pcint0|Pcint1|Capture1|Wdt Etykieta</code><br>
+            <code>Enable</code> / <code>Disable</code> (… <code>Interrupts</code>), <code>Start</code> / <code>Stop Timer0|Timer1|Watchdog</code>, <code>Reset Watchdog</code></p>
+            <p><code>If … Then … Elseif … Else … End If</code> (także w jednej linii)<br>
+            <code>Do … Loop [Until|While]</code>, <code>While … Wend</code>, <code>For … To … [Step] … Next</code>, <code>Exit For|Do|While|Sub</code><br>
+            <code>Select Case</code> z <code>Case 1, 2</code>, <code>Case 3 To 5</code>, <code>Case Is &gt; 7</code>, <code>Case Else</code><br>
+            <code>Gosub</code> / <code>Return</code>, <code>Goto</code>, <code>Sub</code> / <code>Function</code> (<code>Byval</code>, <code>Byref</code>), <code>Call</code>, <code>Local</code><br>
+            <code>Waitms</code>, <code>Waitus</code>, <code>Wait</code>, <code>Set</code>, <code>Reset</code>, <code>Toggle</code>, <code>Incr</code>, <code>Decr</code>, <code>Shift</code>, <code>Rotate</code>, <code>Swap</code>, <code>Bitwait</code>, <code>Debounce</code><br>
+            <code>Data</code> + <code>Lookup(i, Etykieta)</code>, <code>Restore</code> + <code>Read</code>, <code>Readeeprom</code> / <code>Writeeeprom</code>, <code>Idle</code>, <code>Powerdown</code><br>
+            funkcje: <code>Low</code>, <code>High</code>, <code>Abs</code>, <code>Rnd</code>, <code>Getadc</code>, <code>Bits</code>, <code>Nbits</code>, <code>Makeint</code>, <code>Max</code>, <code>Min</code>; operatory <code>And Or Xor Not Mod</code><br>
+            rejestry pod nazwami: <code>Porta</code>, <code>Pinb.2</code>, <code>Timer1</code>, <code>Compare1a</code>, <code>Tifr1.tov1</code>, …</p>
+          </div>
+          <p class="note">Różnice względem BASCOM: parametry procedur są domyślnie przekazywane przez wartość (dla referencji napisz <code>Byref</code>); brak typu String i instrukcji Print (ATtiny24 nie ma UART).</p>
+
+          <h3>Skróty klawiszowe</h3>
+          <table>
+            <tr><td><code>F5</code></td><td>Kompiluj i wgraj</td><td><code>F7</code></td><td>Kompiluj</td></tr>
+            <tr><td><code>F8</code></td><td>Pauza / wznów</td><td><code>F10</code> / <code>F11</code></td><td>Krok linii / krok instrukcji</td></tr>
+            <tr><td><code>Ctrl+S</code></td><td>Zapisz plik</td><td><code>Ctrl+/</code></td><td>Zakomentuj / odkomentuj</td></tr>
+            <tr><td><code>Tab</code> / <code>Shift+Tab</code></td><td>Wcięcie</td><td><code>Ctrl+Z</code></td><td>Cofnij</td></tr>
+          </table>
+
+          <h3>Jak dokładny jest symulator?</h3>
+          <p>Emulator wykonuje kod maszynowy z pliku .hex instrukcja po instrukcji, z dokładnością do cyklu zegara (rdzeń AVR bez mnożenia sprzętowego, jak w ATtiny24). Odwzorowane są porty z pull-upami, Timer0 i Timer1 we wszystkich trybach (z PWM i rejestrem TEMP), INT0, PCINT, watchdog, EEPROM, uśpienie, preskaler zegara i fusebity. Kompilator i biblioteka Arduino są te same co w PlatformIO, więc rozmiary programów i ich zachowanie zgadzają się z płytką. Uproszczone są: ADC, komparator analogowy i USI (nieużywane na stanowisku).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
