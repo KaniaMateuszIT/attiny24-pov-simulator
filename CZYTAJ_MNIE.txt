@@ -69,3 +69,10 @@ Eksport do sprawozdań
 ---------------------
 - Pasek nad stanowiskiem: "📷 PNG" (obraz płytki) i "⏺ GIF" (4 s animacji).
 - Zakładka Analizator: "PNG" (widoczne przebiegi) i "CSV" (zmiany stanów, otwiera się w Excelu).
+
+Gotowe pliki .hex / .elf
+------------------------
+- Przycisk "📂 .hex" (albo przeciągnięcie plików na okno) wgrywa gotowy program bez kompilacji:
+  firmware.hex z PlatformIO albo .hex z prawdziwego BASCOM-a. Działa też w wersji online.
+- firmware.elf z PlatformIO dodaje nazwy funkcji i zmiennych, a razem z main.cpp - numery linii
+  (w platformio.ini: build_flags = -g oraz skrypt dodający -g przy linkowaniu, opis w README.md).

@@ -14,6 +14,7 @@
 # Uruchomienie: python3 serwer/serwer.py [--port 8024] [--no-browser]
 
 import argparse
+import base64
 import json
 import os
 import shutil
@@ -115,18 +116,45 @@ def compile_program(req):
             if r['code'] != 0:
                 return res
 
-        run_tool('avr-objcopy', ['-O', 'ihex', '-R', '.eeprom', 'firmware.elf', 'firmware.hex'], work)
-        run_tool('avr-objcopy', ['-O', 'ihex', '-j', '.eeprom', '--set-section-flags=.eeprom=alloc,load', '--no-change-warnings',
-                                 '--change-section-lma', '.eeprom=0', 'firmware.elf', 'firmware.eep'], work)
-        res['hex'] = Path(work, 'firmware.hex').read_text(encoding='utf-8')
-        eep = Path(work, 'firmware.eep')
-        if eep.is_file():
-            res['eep'] = eep.read_text(encoding='utf-8')
-        res['size'] = run_tool('avr-size', ['-A', 'firmware.elf'], work)['out']
-        res['nm'] = run_tool('avr-nm', ['-S', '-n', '-C', 'firmware.elf'], work)['out']
-        res['lines'] = run_tool('avr-objdump', ['--dwarf=decodedline', 'firmware.elf'], work)['out']
-        res['lst'] = run_tool('avr-objdump', ['-d', '-S', '-C', 'firmware.elf'], work)['out']
-        res['ok'] = True
+        elf_outputs(res, work)
+        return res
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+# hex, eep, rozmiary, symbole, tablica linii i listing z firmware.elf w folderze work
+def elf_outputs(res, work):
+    run_tool('avr-objcopy', ['-O', 'ihex', '-R', '.eeprom', 'firmware.elf', 'firmware.hex'], work)
+    run_tool('avr-objcopy', ['-O', 'ihex', '-j', '.eeprom', '--set-section-flags=.eeprom=alloc,load', '--no-change-warnings',
+                             '--change-section-lma', '.eeprom=0', 'firmware.elf', 'firmware.eep'], work)
+    res['hex'] = Path(work, 'firmware.hex').read_text(encoding='utf-8')
+    eep = Path(work, 'firmware.eep')
+    if eep.is_file():
+        res['eep'] = eep.read_text(encoding='utf-8')
+    res['size'] = run_tool('avr-size', ['-A', 'firmware.elf'], work)['out']
+    res['nm'] = run_tool('avr-nm', ['-S', '-n', '-C', 'firmware.elf'], work)['out']
+    res['lines'] = run_tool('avr-objdump', ['--dwarf=decodedline', 'firmware.elf'], work)['out']
+    res['lst'] = run_tool('avr-objdump', ['-d', '-S', '-C', 'firmware.elf'], work)['out']
+    res['ok'] = True
+
+
+# gotowy plik z zewnątrz (PlatformIO, BASCOM): kind = 'elf' albo 'hex', data = base64
+def analyze_file(req):
+    res = {'ok': False, 'hex': '', 'eep': '', 'size': '', 'nm': '', 'lines': '', 'lst': ''}
+    if BIN is None:
+        res['error'] = 'brak avr-gcc'
+        return res
+    work = tempfile.mkdtemp(prefix='symulator-attiny24-')
+    try:
+        data = base64.b64decode(req.get('data') or '')
+        if req.get('kind') == 'elf':
+            Path(work, 'firmware.elf').write_bytes(data)
+            elf_outputs(res, work)
+        else:
+            Path(work, 'firmware.hex').write_bytes(data)
+            res['hex'] = data.decode('ascii', errors='replace')
+            res['lst'] = run_tool('avr-objdump', ['-D', '-m', 'avr25', '-b', 'ihex', 'firmware.hex'], work)['out']
+            res['ok'] = True
         return res
     finally:
         shutil.rmtree(work, ignore_errors=True)
@@ -162,10 +190,13 @@ class Handler(BaseHTTPRequestHandler):
         self.send(200, MIME.get(full.suffix.lower(), 'application/octet-stream'), full.read_bytes())
 
     def do_POST(self):
-        if self.path != '/api/compile':
+        if self.path not in ('/api/compile', '/api/analyze'):
             self.send(404, 'text/plain; charset=utf-8', b'404')
             return
         body = json.loads(self.rfile.read(int(self.headers.get('Content-Length', 0))).decode('utf-8'))
+        if self.path == '/api/analyze':
+            self.send_json(analyze_file(body))
+            return
         t0 = time.time()
         res = compile_program(body)
         res['ms'] = int((time.time() - t0) * 1000)

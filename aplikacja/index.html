@@ -22,6 +22,8 @@
   <div class="sep"></div>
   <button id="btnCompile" class="btn" title="Skompiluj bez wgrywania">Kompiluj<kbd>F7</kbd></button>
   <button id="btnUpload" class="btn primary" title="Skompiluj i wgraj do mikrokontrolera przez USBasp">Wgraj<kbd>F5</kbd></button>
+  <button id="btnLoadBin" class="btn" title="Wgraj gotowy program bez kompilacji: plik .hex albo .elf (z PlatformIO lub BASCOM-a), opcjonalnie z .eep i kodem źródłowym. Pliki można też przeciągnąć na okno.">📂 .hex</button>
+  <input type="file" id="binInput" accept=".hex,.elf,.eep,.cpp,.c,.ino,.bas" multiple hidden>
   <div class="mem" title="Zajętość pamięci ostatnio skompilowanego programu">
     <div class="bar" id="flashBar"><i></i><span>Flash –</span></div>
     <div class="bar" id="ramBar"><i></i><span>RAM –</span></div>
@@ -174,6 +176,13 @@
             <li><b>Schemat</b> – kolory przewodów pokazują stan: czerwony = 1, niebieski = 0, pomarańczowy przerywany = pull-up, szary przerywany = pin pływający.</li>
           </ul>
 
+          <h3>Gotowe pliki .hex / .elf i eksport</h3>
+          <ul>
+            <li><b>📂 .hex</b> (albo przeciągnięcie plików na okno) wgrywa gotowy program bez kompilacji – np. <code>firmware.hex</code> z PlatformIO albo plik <code>.hex</code> z prawdziwego BASCOM-a. Działa też w wersji online.</li>
+            <li>Plik <code>firmware.elf</code> z PlatformIO dodaje nazwy funkcji i zmiennych; razem z <code>main.cpp</code> także numery linii (krok linii, pułapki). Numery linii wymagają w <code>platformio.ini</code> opcji <code>-g</code> również przy linkowaniu.</li>
+            <li><b>📷 PNG</b> i <b>⏺ GIF</b> nad stanowiskiem zapisują obraz płytki i 4 s animacji; w Analizatorze <b>PNG</b> i <b>CSV</b> zapisują przebiegi do sprawozdania.</li>
+          </ul>
+
           <h3>Typowe pułapki ATtiny24</h3>
           <ul>
             <li>Tylko <b>2 KB flash i 128 B RAM</b> – duże tablice stałych trzymaj we flashu (<code>const … PROGMEM</code> + <code>pgm_read_byte</code>). Stos rośnie w dół od 0xDF i może wejść na zmienne.</li>
@@ -252,6 +261,13 @@
             <li><b>Analyzer</b> – timing diagrams of all pins plus an “in interrupt” channel. Drag with the mouse to measure time.</li>
             <li><b>CPU usage</b> – how much time goes to the main program, interrupts, <code>delay()</code> busy-waiting and sleep, per function and per line.</li>
             <li><b>Schematic</b> – wire colours show the state: red = 1, blue = 0, dashed orange = pull-up, dashed grey = floating pin.</li>
+          </ul>
+
+          <h3>Ready .hex / .elf files and export</h3>
+          <ul>
+            <li><b>📂 .hex</b> (or dragging files onto the window) uploads a ready program without compiling – e.g. <code>firmware.hex</code> from PlatformIO or a <code>.hex</code> from the real BASCOM. Works in the online version too.</li>
+            <li><code>firmware.elf</code> from PlatformIO adds function and variable names; together with <code>main.cpp</code> also line numbers (step line, breakpoints). Line numbers need <code>-g</code> at link time as well in <code>platformio.ini</code>.</li>
+            <li><b>📷 PNG</b> and <b>⏺ GIF</b> above the board save an image and a 4-second animation; in the Analyzer, <b>PNG</b> and <b>CSV</b> save the waveforms for your report.</li>
           </ul>
 
           <h3>Common ATtiny24 pitfalls</h3>

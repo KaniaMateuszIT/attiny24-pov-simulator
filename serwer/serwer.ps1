@@ -101,6 +101,37 @@ function Compile($req) {
   }
 }
 
+# gotowy plik z zewnatrz (PlatformIO, BASCOM): kind = 'elf' albo 'hex', data = base64
+function Analyze($req) {
+  $work = Join-Path $tempRoot ('symulator-attiny24\' + [guid]::NewGuid().ToString('N').Substring(0, 12))
+  New-Item -ItemType Directory -Force -Path $work | Out-Null
+  $res = @{ ok = $false; hex = ''; eep = ''; size = ''; nm = ''; lines = ''; lst = '' }
+  try {
+    $bytes = [Convert]::FromBase64String([string]$req.data)
+    if ([string]$req.kind -eq 'elf') {
+      [System.IO.File]::WriteAllBytes((Join-Path $work 'firmware.elf'), $bytes)
+      Run-Tool 'avr-objcopy.exe' @('-O', 'ihex', '-R', '.eeprom', 'firmware.elf', 'firmware.hex') $work | Out-Null
+      Run-Tool 'avr-objcopy.exe' @('-O', 'ihex', '-j', '.eeprom', '--set-section-flags=.eeprom=alloc,load', '--no-change-warnings',
+        '--change-section-lma', '.eeprom=0', 'firmware.elf', 'firmware.eep') $work | Out-Null
+      $res.hex = [System.IO.File]::ReadAllText((Join-Path $work 'firmware.hex'))
+      $eepPath = Join-Path $work 'firmware.eep'
+      if (Test-Path $eepPath) { $res.eep = [System.IO.File]::ReadAllText($eepPath) }
+      $res.size = (Run-Tool 'avr-size.exe' @('-A', 'firmware.elf') $work).out
+      $res.nm = (Run-Tool 'avr-nm.exe' @('-S', '-n', '-C', 'firmware.elf') $work).out
+      $res.lines = (Run-Tool 'avr-objdump.exe' @('--dwarf=decodedline', 'firmware.elf') $work).out
+      $res.lst = (Run-Tool 'avr-objdump.exe' @('-d', '-S', '-C', 'firmware.elf') $work).out
+    } else {
+      [System.IO.File]::WriteAllBytes((Join-Path $work 'firmware.hex'), $bytes)
+      $res.hex = [System.Text.Encoding]::ASCII.GetString($bytes)
+      $res.lst = (Run-Tool 'avr-objdump.exe' @('-D', '-m', 'avr25', '-b', 'ihex', 'firmware.hex') $work).out
+    }
+    $res.ok = $true
+    return $res
+  } finally {
+    Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue
+  }
+}
+
 function Send($ctx, [int]$status, [string]$type, [byte[]]$bytes) {
   $resp = $ctx.Response
   $resp.StatusCode = $status
@@ -145,6 +176,12 @@ while ($listener.IsListening) {
   try {
     if ($path -eq '/api/ping') {
       Send-Json $ctx @{ ok = $true; kompilator = 'avr-gcc 7.3.0'; port = $Port }
+    } elseif ($path -eq '/api/analyze' -and $req.HttpMethod -eq 'POST') {
+      $reader = New-Object System.IO.StreamReader($req.InputStream, $utf8)
+      $body = $reader.ReadToEnd() | ConvertFrom-Json
+      $res = Analyze $body
+      Write-Host ("  [{0}] gotowy plik ({1})" -f (Get-Date -Format 'HH:mm:ss'), $body.kind)
+      Send-Json $ctx $res
     } elseif ($path -eq '/api/compile' -and $req.HttpMethod -eq 'POST') {
       $reader = New-Object System.IO.StreamReader($req.InputStream, $utf8)
       $body = $reader.ReadToEnd() | ConvertFrom-Json

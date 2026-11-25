@@ -10,6 +10,7 @@ import { compileProgram, parseBuild, funcAt, FLASH_SIZE, RAM_SIZE } from './komp
 import { CpuUse } from './wykorzystanie.js';
 import { setLang as setUiLang, getLang, initialLang, onLangChange } from './i18n.js';
 import { download, savePng, GifRecorder } from './eksport.js';
+import { analyzeLocally, hexFlashBytes, toBase64 } from './plik.js';
 
 const THEMES = ['dark', 'light', 'ocean', 'contrast'];
 const REPO_URL = 'https://github.com/KaniaMateuszIT/attiny24-pov-simulator';
@@ -176,7 +177,8 @@ function updateModeInfo() {
 
 function markDirty() {
   const dirty = app.chip && app.chip.lang === app.lang && app.chip.src != null && editor.getValue() !== app.chip.src;
-  $('#dirty').textContent = dirty ? ' ● zmieniony – wgraj ponownie' : '';
+  const foreign = app.chip && app.chip.binary && app.chip.src == null;   // w układzie program z pliku, a nie ten z edytora
+  $('#dirty').textContent = foreign ? ` ● w układzie: ${app.chip.binary}` : dirty ? ' ● zmieniony – wgraj ponownie' : '';
   updateModeInfo();
 }
 
@@ -403,6 +405,11 @@ async function doUpload() {
   let r = app.lastBuild;
   if (!r || app.lastBuildSrc !== editor.getValue() || r.lang !== app.lang || r.fcpu !== (app.lang === 'bas' ? r.fcpu : app.fcpu)) r = await doCompile();
   if (!r) return;
+  await flashProgram(r, app.lastBuildSrc);
+}
+
+// zapis programu do układu przez symulowany USBasp - po kompilacji albo z gotowego pliku .hex / .elf
+async function flashProgram(r, src, hexName = 'firmware.hex') {
   const prob = ispProblem();
   if (prob) { avrdudeError(prob); return; }
   app.busy = true;
@@ -410,7 +417,7 @@ async function doUpload() {
   const bytes = r.size.flash;
   stand.startIsp();
   try {
-    log('avrdude -c usbasp -p t24 -e -U flash:w:firmware.hex:i', 'cmd');
+    log(`avrdude -c usbasp -p t24 -e -U flash:w:${hexName}:i`, 'cmd');
     log('avrdude: warning: cannot set sck period. please check for usbasp firmware update.', 'dim');
     log('avrdude: AVR device initialized and ready to accept instructions', 'out');
     await sleep(120);
@@ -420,7 +427,7 @@ async function doUpload() {
     log(`avrdude: writing ${bytes} bytes flash ...`, 'out');
     await animateProgress('Writing', 0.12 + bytes / 1400);
     log(`avrdude: ${bytes} bytes of flash written`, 'out');
-    log('avrdude: verifying flash memory against firmware.hex', 'out');
+    log(`avrdude: verifying flash memory against ${hexName}`, 'out');
     await animateProgress('Reading', 0.1 + bytes / 1700);
     log(`avrdude: ${bytes} bytes of flash verified`, 'out');
     const f = cpu.fuses;
@@ -437,7 +444,7 @@ async function doUpload() {
     log('avrdude: zapisano też EEPROM (zmienne EEMEM)', 'dim');
   }
   clearStepLine();
-  installProgram(r, app.lastBuildSrc);
+  installProgram(r, src);
   saveChip();
   store.set('eeprom', Array.from(cpu.eeprom));
   cpu.reset('isp');
@@ -446,6 +453,54 @@ async function doUpload() {
   stand.clearPov();
   setRunning(true);
   checkFcpu();
+}
+
+// gotowy program z dysku: .hex albo .elf (+ opcjonalnie .eep i kod źródłowy do podglądu linii)
+async function loadBinaryFiles(list) {
+  const files = [...list];
+  const pick = (re) => files.find((f) => re.test(f.name));
+  const elf = pick(/\.elf$/i), hex = pick(/\.hex$/i), eep = pick(/\.eep$/i), src = pick(/\.(cpp|c|ino|bas)$/i);
+  const bin = elf || hex;
+  if (!bin) {
+    if (src) openFromDisk(src);
+    else log('Wybierz plik .hex albo .elf (opcjonalnie także .eep i plik źródłowy).', 'err');
+    return;
+  }
+  if (app.busy) return;
+  const kind = elf ? 'elf' : 'hex';
+  let raw = null;
+  try {
+    const content = kind === 'elf' ? await bin.arrayBuffer() : await bin.text();
+    if (app.serverOk) {
+      const data = toBase64(kind === 'elf' ? content : new TextEncoder().encode(content));
+      const r = await fetch('/api/analyze', { method: 'POST', body: JSON.stringify({ kind, data }) });
+      if (r.ok) raw = await r.json();
+    }
+    if (!raw || !raw.ok) raw = analyzeLocally(kind, content);
+    if (!raw.size) raw.size = `.text  ${hexFlashBytes(raw.hex)}  0\n.data  0  0\n.bss  0  0\n`;
+    if (eep && !raw.eep) raw.eep = await eep.text();
+  } catch (e) {
+    log(`Nie udało się wczytać pliku ${bin.name}: ${e.message}`, 'err');
+    return;
+  }
+  const srcText = src ? (await src.text()).replace(/\r\n/g, '\n') : null;
+  const lang = src ? (/\.bas$/i.test(src.name) ? 'bas' : 'cpp') : 'bin';
+  const r = parseBuild(raw, lang === 'bin' ? 'cpp' : lang, null);
+  r.lang = lang;
+  r.binary = bin.name;
+  if (r.size.flash > FLASH_SIZE) { log(`Program z pliku ${bin.name} zajmuje ${r.size.flash} B – to więcej niż 2048 B pamięci ATtiny24.`, 'err'); return; }
+  if (src) {
+    app.files[lang] = src.name;
+    store.set('files', app.files);
+    setLang(lang, srcText);
+    saveSource();
+  }
+  const info = [kind === 'elf' ? (r.symbols.funcs.length ? 'z symbolami' : 'bez symboli') : 'bez symboli',
+    r.lines && r.lines.linesToAddr.size ? 'z numerami linii' : null, src ? `źródło: ${src.name}` : null].filter(Boolean).join(', ');
+  log(`Gotowy program: ${bin.name} – ${r.size.flash} B kodu (${info}).`, 'info');
+  await flashProgram(r, srcText, bin.name);
+  app.lastBuild = null;
+  markDirty();
 }
 
 function installProgram(r, src) {
@@ -467,7 +522,7 @@ function installProgram(r, src) {
 function saveChip() {
   const c = app.chip;
   if (!c) return;
-  store.set('chip', { raw: c.raw, lang: c.lang, fcpu: c.fcpu, src: c.src, basicVars: c.basicVars || (c.basic ? c.basic.vars : null), csource: c.csource || null });
+  store.set('chip', { raw: c.raw, lang: c.lang, fcpu: c.fcpu, src: c.src, basicVars: c.basicVars || (c.basic ? c.basic.vars : null), csource: c.csource || null, binary: c.binary || null });
 }
 
 function restoreChip() {
@@ -478,10 +533,11 @@ function restoreChip() {
     r.lang = s.lang;
     r.fcpu = s.fcpu;
     r.csource = s.csource;
+    r.binary = s.binary;
     installProgram(r, s.src);
     if (s.lang === app.lang) app.lastBuildSrc = s.src;
     if (s.csource) cEditor.setValue(s.csource);
-    log(`W pamięci układu jest program z poprzedniej sesji (${s.lang === 'bas' ? 'BASCOM' : 'C/C++'}, ${r.size.flash} B).`, 'dim');
+    log(`W pamięci układu jest program z poprzedniej sesji (${s.binary || (s.lang === 'bas' ? 'BASCOM' : 'C/C++')}, ${r.size.flash} B).`, 'dim');
   } catch (e) {
     log('Nie udało się odtworzyć programu z poprzedniej sesji: ' + e.message, 'warn');
   }
@@ -542,7 +598,7 @@ function diagnostic(type, info) {
 
 function checkFcpu() {
   const c = app.chip;
-  if (!c || !cpu.clockOk) return;
+  if (!c || !cpu.clockOk || c.binary) return;     // z gotowego pliku nie wiadomo, pod jaki zegar go kompilowano
   const fc = c.fcpu || 8000000;
   if (Math.abs(fc - cpu.freq) / fc > 0.01) {
     diagMsg('fcpu' + cpu.freq, `⚠ Program skompilowano dla F_CPU = ${fc / 1e6} MHz, a mikrokontroler pracuje z ${cpu.freq / 1e6} MHz – wszystkie opóźnienia i czasy będą ${(fc / cpu.freq).toFixed(fc > cpu.freq ? 0 : 2)}× ${fc > cpu.freq ? 'dłuższe' : 'krótsze'}.`, 'diag e');
@@ -1277,6 +1333,15 @@ function bindUi() {
   for (const b of $$('#uiLangSeg button')) b.onclick = () => applyUiLang(b.dataset.uiLang);
   $('#theme').onchange = (e) => applyTheme(e.target.value);
   $('#btnAbout').onclick = showAbout;
+  $('#btnLoadBin').onclick = () => $('#binInput').click();
+  $('#binInput').onchange = (e) => { if (e.target.files.length) loadBinaryFiles(e.target.files); e.target.value = ''; };
+  // przeciągnięcie plików na okno: .hex/.elf wgrywa program, sam plik źródłowy otwiera w edytorze
+  window.addEventListener('dragover', (e) => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); });
+  window.addEventListener('drop', (e) => {
+    if (!e.dataTransfer.files.length) return;
+    e.preventDefault();
+    loadBinaryFiles(e.dataTransfer.files);
+  });
   $('#btnShot').onclick = saveStandPng;
   $('#btnGif').onclick = startGif;
   $('#btnOpen').onclick = () => $('#fileInput').click();

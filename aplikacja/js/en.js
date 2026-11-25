@@ -223,6 +223,11 @@ export const EXACT = new Map([
     'There is no such programmer in the lab – it is a “rescue” for a chip that USBasp can no longer see.\n\nThe factory fuses L:62 H:DF E:FF will be restored. Note: CKDIV8 is programmed from the factory, so the chip will start with a 1 MHz clock.'],
   ['Na pewno zapisać fusebity?', 'Really write the fuses?'],
 
+  // --- gotowe pliki .hex / .elf
+  ['Wgraj gotowy program bez kompilacji: plik .hex albo .elf (z PlatformIO lub BASCOM-a), opcjonalnie z .eep i kodem źródłowym. Pliki można też przeciągnąć na okno.',
+    'Upload a ready program without compiling: a .hex or .elf file (from PlatformIO or BASCOM), optionally with .eep and the source code. You can also drag the files onto the window.'],
+  ['Wybierz plik .hex albo .elf (opcjonalnie także .eep i plik źródłowy).', 'Choose a .hex or .elf file (optionally also .eep and the source file).'],
+
   // --- eksport
   ['Zapisz obraz stanowiska do pliku PNG', 'Save the board view as a PNG file'],
   ['Nagraj 4 sekundy animacji stanowiska do pliku GIF', 'Record 4 seconds of the board view as a GIF file'],
@@ -291,6 +296,18 @@ export const PATTERNS = [
     'Online version: the examples run right away; to compile your own programs use the downloadable version (Windows, Linux, macOS) – link in the ⓘ window.'),
   L('Wersja online nie ma kompilatora – działają tylko przykłady bez zmian. Własne programy skompilujesz w wersji do pobrania (GitHub → Code → Download ZIP).',
     'The online version has no compiler – only unmodified examples run. Compile your own programs in the downloadable version (GitHub → Code → Download ZIP).'),
+  [/^Gotowy program: (\S+) – (\d+) B kodu \(/, 'Ready program: $1 – $2 B of code ('],
+  L('z numerami linii', 'with line numbers'),
+  L('z symbolami', 'with symbols'),
+  L('bez symboli', 'no symbols'),
+  [/źródło: /, 'source: '],
+  [/^Nie udało się wczytać pliku (\S+): /, 'Could not load the file $1: '],
+  L('to nie jest plik ELF', 'this is not an ELF file'),
+  L('oczekiwano 32-bitowego ELF little endian', 'expected a 32-bit little-endian ELF'),
+  L('to nie jest program dla AVR', 'this is not an AVR program'),
+  L('plik .hex nie zawiera danych', 'the .hex file contains no data'),
+  [/^Program z pliku (\S+) zajmuje (\d+) B – to więcej niż 2048 B pamięci ATtiny24\.$/, 'The program in $1 takes $2 B – more than the 2048 B of ATtiny24 flash.'],
+  [/^● w układzie: /, '● in the chip: '],
   [/^Zapisano plik /, 'Saved file '],
   [/^Nie udało się zapisać pliku: /, 'Could not save the file: '],
   [/^Otwarto plik /, 'Opened file '],
