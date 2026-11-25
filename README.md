@@ -6,6 +6,11 @@
 </p>
 
 <p align="center">
+  <a href="https://kaniamateuszit.github.io/attiny24-pov-simulator/"><b>▶ Try it online</b></a>
+  &nbsp;·&nbsp; <a href="#quick-start">Download and run locally</a>
+</p>
+
+<p align="center">
   <img src="docs/screenshot.png" alt="Simulator: C++ editor, spinning POV board with a light wave, live schematic" width="100%">
 </p>
 
@@ -44,7 +49,12 @@ programs at home – and see what the board would actually show, not just pin st
 **Your language, your colours**
 - Interface in **English or Polish** – switch with the PL / EN buttons at the top (help, console messages,
   diagnostics and compiler hints are translated too). The browser language is used on first start.
-- Four **colour themes**: Dark, Light, Ocean and High contrast.
+- Four **colour themes**: Dark, Light, Ocean and High contrast – the board view follows the theme too.
+
+**Ready for lab reports**
+- **📷 PNG** of the board view and **⏺ GIF**: a 4-second animation of the spinning board (palette tuned to the recording).
+- Logic analyzer export: the visible waveforms as **PNG**, the state changes as **CSV**
+  (semicolon and decimal comma in Polish mode, so Excel opens it directly).
 
 **Debugging and insight**
 - Pause, step by line (F10) or instruction (F11), breakpoints, registers with named bits, variables,
@@ -57,6 +67,13 @@ programs at home – and see what the board would actually show, not just pin st
 
 ## Quick start
 
+### Online
+
+Open **https://kaniamateuszit.github.io/attiny24-pov-simulator/** – the examples run straight away
+(they come precompiled). There is no compiler online, so to write your own programs use the local version.
+
+### Windows
+
 Requirements: **Windows 10/11** and **Edge or Chrome**. No installation – the compiler is included.
 
 1. Download the repository (**Code → Download ZIP**) and unpack it, or `git clone` it.
@@ -66,6 +83,22 @@ Requirements: **Windows 10/11** and **Edge or Chrome**. No installation – the 
 
 Closing the console window stops the simulator. If port 8024 is busy, the server picks the next free one
 (8024–8043) and prints the address.
+
+### Linux and macOS
+
+Requirements: **Python 3**, a browser and **avr-gcc**. The Arduino library in `arduino/` was built with
+avr-gcc **7.3.0**, so programs using `Arduino.h` need exactly that version – the easiest way to get it is PlatformIO's
+toolchain (works on every OS):
+
+```sh
+pip install platformio
+pio pkg install -g -t platformio/toolchain-atmelavr@1.70300.191015
+./symulator.sh            # or: python3 serwer/serwer.py
+```
+
+The server looks for avr-gcc in `AVR_GCC_BIN`, then in PlatformIO's toolchain, then on `PATH`
+(e.g. `apt install gcc-avr avr-libc` / `brew install avr-gcc`). With a different gcc version BASCOM programs and
+C/C++ with your own `main()` still work; only Arduino-style programs may fail to link.
 
 Tip: the address can preselect an example, language and theme, e.g.
 `http://localhost:8024/#przyklad=02_licznik.cpp&lang=en&theme=light`.
@@ -98,8 +131,9 @@ Your own programs are kept in the browser between sessions; **Otwórz / Zapisz**
 
 ```
 Symulator.bat ──► serwer/serwer.ps1   local HTTP server (Windows PowerShell 5.1)
+symulator.sh  ──► serwer/serwer.py    the same server in Python (Linux, macOS, Windows)
                     ├─ serves aplikacja/        the web app
-                    └─ runs  kompilator/        avr-gcc, nm, objdump  ──► hex, symbols, line table, listing
+                    └─ runs  avr-gcc, nm, objdump  ──► hex, symbols, line table, listing
 
 aplikacja/js/
   avr.js            ATtiny24 core and peripherals, cycle-accurate
@@ -108,10 +142,14 @@ aplikacja/js/
   bascom.js         BASCOM → C translator      kompilacja.js  build results (hex, symbols, lines)
   analizator.js     logic analyzer             wykorzystanie.js  CPU utilization profiler
   i18n.js, en.js    PL / EN interface switch and the English dictionary
+  eksport.js        PNG / GIF / CSV export (GIF encoder included, no libraries)
   main.js           UI: editor, upload, debugger, panels
 ```
 
 Everything runs locally; the only reason for the server is to run the real compiler.
+The online version (GitHub Pages, `.github/workflows/pages.yml`) is the same `aplikacja/` folder; instead of
+compiling, the examples use build results stored in `aplikacja/przyklady/build/`. After changing an example,
+start the simulator and run `node tools/zbuduj-przyklady.mjs` to refresh them.
 
 ## Limitations
 
@@ -119,7 +157,7 @@ Everything runs locally; the only reason for the server is to run the real compi
 - BASCOM: a subset of the language (listed in the **Pomoc** / Help tab); no `String` or `Print`;
   `Sub` / `Function` parameters are passed by value unless declared `Byref`.
 - Comments in the bundled example programs are in Polish.
-- Windows only, because of the PowerShell server and the bundled Windows toolchain.
+- The bundled compiler is for Windows; on Linux/macOS you install avr-gcc yourself (see above).
 
 ## Author
 

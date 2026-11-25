@@ -223,6 +223,13 @@ export const EXACT = new Map([
     'There is no such programmer in the lab – it is a “rescue” for a chip that USBasp can no longer see.\n\nThe factory fuses L:62 H:DF E:FF will be restored. Note: CKDIV8 is programmed from the factory, so the chip will start with a 1 MHz clock.'],
   ['Na pewno zapisać fusebity?', 'Really write the fuses?'],
 
+  // --- eksport
+  ['Zapisz obraz stanowiska do pliku PNG', 'Save the board view as a PNG file'],
+  ['Nagraj 4 sekundy animacji stanowiska do pliku GIF', 'Record 4 seconds of the board view as a GIF file'],
+  ['Kodowanie…', 'Encoding…'],
+  ['Zapisz widoczne przebiegi do pliku PNG', 'Save the visible waveforms as a PNG file'],
+  ['Zapisz zmiany stanów z widocznego okna do pliku CSV (Excel)', 'Save the state changes in the visible window as a CSV file (Excel)'],
+
   // --- okna dialogowe
   ['Anuluj', 'Cancel'],
   ['Tak', 'Yes'],
@@ -280,6 +287,10 @@ export const PATTERNS = [
   L(' Autor: Mateusz Kania.', ' Author: Mateusz Kania.'),
   L('Brak połączenia z serwerem symulatora – kompilacja nie zadziała. Uruchom symulator plikiem Symulator.bat.',
     'No connection to the simulator server – compiling will not work. Start the simulator with Symulator.bat.'),
+  L('Wersja online: przykłady działają od razu, a własne programy skompilujesz w wersji do pobrania (Windows, Linux, macOS) – link w oknie ⓘ.',
+    'Online version: the examples run right away; to compile your own programs use the downloadable version (Windows, Linux, macOS) – link in the ⓘ window.'),
+  L('Wersja online nie ma kompilatora – działają tylko przykłady bez zmian. Własne programy skompilujesz w wersji do pobrania (GitHub → Code → Download ZIP).',
+    'The online version has no compiler – only unmodified examples run. Compile your own programs in the downloadable version (GitHub → Code → Download ZIP).'),
   [/^Zapisano plik /, 'Saved file '],
   [/^Nie udało się zapisać pliku: /, 'Could not save the file: '],
   [/^Otwarto plik /, 'Opened file '],

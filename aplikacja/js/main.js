@@ -9,6 +9,7 @@ import { Editor } from './edytor.js';
 import { compileProgram, parseBuild, funcAt, FLASH_SIZE, RAM_SIZE } from './kompilacja.js';
 import { CpuUse } from './wykorzystanie.js';
 import { setLang as setUiLang, getLang, initialLang, onLangChange } from './i18n.js';
+import { download, savePng, GifRecorder } from './eksport.js';
 
 const THEMES = ['dark', 'light', 'ocean', 'contrast'];
 const REPO_URL = 'https://github.com/KaniaMateuszIT/attiny24-pov-simulator';
@@ -63,6 +64,7 @@ const view = new StandView($('#standCanvas'));
 const schem = new Schematic($('#tab-schem'));
 const analyzer = new Analyzer($('#tab-analyzer'));
 const cpuUse = new CpuUse($('#cpuuse'));
+const gif = new GifRecorder();
 
 const app = {
   lang: store.get('lang', 'cpp'),
@@ -698,6 +700,7 @@ function frame(now) {
   view.showBoard = $('#showBoard').checked;
   view.strobe = $('#strobe').checked;
   view.draw(stand, cpu);
+  if (gif.active) recordGifFrame();
   cpuUse.sample(cpu);
   updateHud();
   const work = performance.now() - work0;
@@ -1086,6 +1089,47 @@ function showAbout() {
   document.body.append(back);
 }
 
+// ---------------------------------------------------------------- eksport do sprawozdań
+
+function savedLog(name, bytes) {
+  if (!bytes) return;
+  log(`Zapisano plik ${name} (${Math.max(1, Math.round(bytes / 1024))} kB).`, 'ok');
+}
+
+async function saveStandPng() {
+  savedLog('stanowisko.png', await savePng(view.canvas, 'stanowisko.png'));
+}
+
+function startGif() {
+  if (gif.active) return;
+  gif.start(4, 20, 360);
+  $('#btnGif').classList.add('on');
+}
+
+// kwadrat wokół talerza; nagranie co klatkę ekranu, po 4 s kodowanie i pobranie pliku
+function recordGifFrame() {
+  const s = Math.min(Math.round(view.R * 2.36), view.w, view.h);
+  const crop = { x: Math.max(0, Math.round(view.cx - s / 2)), y: Math.max(0, Math.round(view.cy - s / 2)), s };
+  const done = gif.capture(view.canvas, crop);
+  const btn = $('#btnGif');
+  if (!done) { btn.textContent = `⏺ ${fmtNum(gif.elapsed())} s`; return; }
+  btn.textContent = 'Kodowanie…';
+  setTimeout(() => {
+    const blob = gif.encode();
+    download('stanowisko.gif', blob);
+    savedLog('stanowisko.gif', blob.size);
+    btn.textContent = '⏺ GIF';
+    btn.classList.remove('on');
+  }, 30);
+}
+
+analyzer.onExport = async (kind) => {
+  if (kind === 'png') { savedLog('analizator.png', await savePng(analyzer.canvas, 'analizator.png')); return; }
+  const blob = new Blob(['﻿' + analyzer.toCsv(getLang() !== 'en')], { type: 'text/csv;charset=utf-8' });
+  download('analizator.csv', blob);
+  savedLog('analizator.csv', blob.size);
+};
+
 // ---------------------------------------------------------------- sterowanie stanowiskiem
 
 function setMotor(on) {
@@ -1233,6 +1277,8 @@ function bindUi() {
   for (const b of $$('#uiLangSeg button')) b.onclick = () => applyUiLang(b.dataset.uiLang);
   $('#theme').onchange = (e) => applyTheme(e.target.value);
   $('#btnAbout').onclick = showAbout;
+  $('#btnShot').onclick = saveStandPng;
+  $('#btnGif').onclick = startGif;
   $('#btnOpen').onclick = () => $('#fileInput').click();
   $('#fileInput').onchange = (e) => { const f = e.target.files[0]; if (f) openFromDisk(f); e.target.value = ''; };
   $('#btnSave').onclick = saveToDisk;
@@ -1281,7 +1327,10 @@ async function boot() {
   setLang(app.lang);
   log('Symulator ATtiny24 – stanowisko LTM. Kompilator: avr-gcc 7.3.0 (jak w PlatformIO), rdzeń Arduino ATtiny. Autor: Mateusz Kania.', 'info');
   const ok = await pingServer();
-  if (!ok) {
+  app.online = !ok && !['localhost', '127.0.0.1'].includes(location.hostname);
+  if (app.online) {
+    log('Wersja online: przykłady działają od razu, a własne programy skompilujesz w wersji do pobrania (Windows, Linux, macOS) – link w oknie ⓘ.', 'info');
+  } else if (!ok) {
     log('Brak połączenia z serwerem symulatora – kompilacja nie zadziała. Uruchom symulator plikiem Symulator.bat.', 'err');
     setStatus('Brak serwera', 'err');
   }
@@ -1296,7 +1345,7 @@ async function boot() {
   // pierwsze uruchomienie: fala na kręcącym się talerzu
   const fromHash = decodeURIComponent((location.hash.match(/przyklad=([^&]+)/) || [])[1] || '');
   const first = !store.get('started');
-  if ((fromHash || first) && ok) {
+  if ((fromHash || first) && (ok || app.online)) {
     store.set('started', true);
     const i = app.examples.findIndex(x => x.file === (fromHash || '03_fala.cpp'));
     if (i >= 0) {

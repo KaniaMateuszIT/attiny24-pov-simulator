@@ -59,3 +59,13 @@ Różnice względem prawdziwego stanowiska
 - ADC, komparator analogowy i USI są uproszczone (stanowisko z nich nie korzysta).
 - BASCOM: obsługiwany jest podzbiór języka (lista w zakładce Pomoc); parametry Sub/Function są
   domyślnie przekazywane przez wartość (dla referencji trzeba napisać Byref); brak String i Print.
+
+Inne systemy i wersja online
+----------------------------
+- Linux / macOS: ./symulator.sh (Python 3 + avr-gcc 7.3.0, np. z PlatformIO) - szczegóły w README.md.
+- Wersja online (bez kompilatora, tylko przykłady): https://kaniamateuszit.github.io/attiny24-pov-simulator/
+
+Eksport do sprawozdań
+---------------------
+- Pasek nad stanowiskiem: "📷 PNG" (obraz płytki) i "⏺ GIF" (4 s animacji).
+- Zakładka Analizator: "PNG" (widoczne przebiegi) i "CSV" (zmiany stanów, otwiera się w Excelu).

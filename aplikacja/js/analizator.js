@@ -40,6 +40,8 @@ export class Analyzer {
         <span class="an-span"></span>
         <span class="an-meas"></span>
         <span class="spacer"></span>
+        <button class="btn sm" data-a="png" title="Zapisz widoczne przebiegi do pliku PNG">PNG</button>
+        <button class="btn sm" data-a="csv" title="Zapisz zmiany stanów z widocznego okna do pliku CSV (Excel)">CSV</button>
         <button class="btn sm" data-a="clear">Wyczyść</button>
       </div>
       <div class="an-canvas"><canvas></canvas></div>
@@ -55,6 +57,7 @@ export class Analyzer {
       if (a === 'in') this.zoom(0.5);
       if (a === 'out') this.zoom(2);
       if (a === 'clear') this.clear();
+      if ((a === 'png' || a === 'csv') && this.onExport) this.onExport(a);
       this.draw();
     });
     this.canvas.addEventListener('wheel', (e) => {
@@ -262,6 +265,23 @@ export class Analyzer {
     this.spanEl.textContent = `okno: ${fmtTime(this.span)}`;
   }
 }
+
+// zmiany stanów pinów w oknie [t0, t1] jako CSV; pl = true: średnik i przecinek dziesiętny (Excel po polsku)
+Analyzer.prototype.toCsv = function (pl) {
+  const sep = pl ? ';' : ',';
+  const num = (t) => (pl ? t.toFixed(9).replace('.', ',') : t.toFixed(9));
+  const t0 = this.tEnd - this.span, t1 = this.tEnd;
+  const rows = [['t [s]', ...CHANNELS.map(([n]) => (n === 'w przerwaniu' ? (pl ? 'w przerwaniu' : 'in interrupt') : n))].join(sep)];
+  const row = (t, v) => rows.push([num(t), ...CHANNELS.map(([, bit]) => (v >> bit) & 1)].join(sep));
+  const first = this.find(t0);
+  if (first >= 0) row(t0, this.v[this.idx(first)]);
+  for (let k = Math.max(0, first + 1); k < this.count; k++) {
+    const t = this.t[this.idx(k)];
+    if (t > t1) break;
+    row(t, this.v[this.idx(k)]);
+  }
+  return rows.join('\r\n') + '\r\n';
+};
 
 function niceStep(x) {
   const p = Math.pow(10, Math.floor(Math.log10(x)));

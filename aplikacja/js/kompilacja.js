@@ -29,7 +29,13 @@ export async function compileProgram(lang, source, fcpu = 8000000) {
     if (!r.ok) throw new Error(`serwer odpowiedział ${r.status}`);
     res = await r.json();
   } catch (e) {
-    return { ok: false, lang, mode, offline: true, problems: [], log: [{ cls: 'err', text: 'Brak połączenia z serwerem symulatora (' + e.message + '). Uruchom plik Symulator.bat.' }] };
+    // bez serwera (np. wersja online na GitHub Pages): gotowe wyniki kompilacji przykładów
+    res = await prebuilt(buildKey(mode, source, csource, fcpu));
+    if (!res) {
+      return { ok: false, lang, mode, offline: true, problems: [], log: [{ cls: 'err', text: location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+        ? 'Brak połączenia z serwerem symulatora (' + e.message + '). Uruchom plik Symulator.bat.'
+        : 'Wersja online nie ma kompilatora – działają tylko przykłady bez zmian. Własne programy skompilujesz w wersji do pobrania (GitHub → Code → Download ZIP).' }] };
+    }
   }
   const log = [];
   const problems = [];
@@ -75,6 +81,29 @@ export function parseBuild(raw, lang, basicVars) {
     vars: collectVars(symbols, basicVars ? { vars: basicVars } : null),
     basicVars,
   };
+}
+
+// klucz gotowego wyniku kompilacji: skrót FNV-1a z trybu, F_CPU i kodu
+export function buildKey(mode, source, csource, fcpu) {
+  const text = `${mode}\n${fcpu}\n${String(source).replace(/\r\n/g, '\n')}\n${String(csource || '').replace(/\r\n/g, '\n')}`;
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+
+// gotowe wyniki leżą w przyklady/build/ (tworzy je tools/zbuduj-przyklady.mjs)
+let prebuiltIndex = null;
+async function prebuilt(key) {
+  try {
+    if (!prebuiltIndex) prebuiltIndex = await (await fetch('przyklady/build/index.json')).json();
+    const file = prebuiltIndex[key];
+    return file ? await (await fetch('przyklady/build/' + file)).json() : null;
+  } catch {
+    return null;
+  }
 }
 
 function stripComments(s) {
