@@ -524,3 +524,33 @@ select.btn option, select.btn optgroup, select option { background: var(--panel2
 .top #examples { flex-shrink: 1; min-width: 120px; }
 .top .spacer { flex-shrink: 1; }
 .btn.primary kbd { color: rgba(255, 255, 255, .8); border-color: rgba(255, 255, 255, .45); }
+
+/* ---------------------------------------------------------------- widok stanowiska (canvas) w motywach
+   --st-blend: lighter = światło diod dodawane do ciemnego tła; source-over = kładzione na jasne tło */
+:root {
+  --st-bg0: #171c26; --st-bg1: #090b10; --st-base0: #1d232f; --st-base1: #141922; --st-base-line: #2b3342; --st-screw: #323a49;
+  --st-disc: rgba(14, 18, 26, .96); --st-disc-line: rgba(120, 140, 170, .18); --st-track: rgba(120, 140, 170, .05);
+  --st-emit: #2a3140; --st-emit-line: #46506a; --st-axis: #2a2f3a; --st-blend: lighter;
+  --hud: #b6c2d4; --hud-strong: #ffffff; --hud-shadow: #000000; --hud-dim: #6b778a;
+}
+:root[data-theme="light"] {
+  --st-bg0: #f6f8fa; --st-bg1: #dbe1e9; --st-base0: #cdd4de; --st-base1: #c1c9d4; --st-base-line: #a9b3c1; --st-screw: #97a1b0;
+  --st-disc: rgba(238, 242, 246, .97); --st-disc-line: rgba(60, 75, 100, .25); --st-track: rgba(60, 75, 100, .09);
+  --st-emit: #b9c2cf; --st-emit-line: #8a95a6; --st-axis: #8a94a3; --st-blend: source-over;
+  --hud: #2f3a4a; --hud-strong: #0b1220; --hud-shadow: #ffffff; --hud-dim: #6b778a;
+}
+:root[data-theme="ocean"] {
+  --st-bg0: #26324c; --st-bg1: #141b2a; --st-base0: #2a3550; --st-base1: #1f2840; --st-base-line: #3b4866; --st-screw: #46546f;
+  --st-disc: rgba(22, 29, 45, .96); --st-disc-line: rgba(136, 192, 208, .2); --st-track: rgba(136, 192, 208, .06);
+  --st-emit: #34405a; --st-emit-line: #56637e; --st-axis: #34405a; --st-blend: lighter;
+  --hud: #d8dee9; --hud-strong: #ffffff; --hud-shadow: #000000; --hud-dim: #8794ab;
+}
+:root[data-theme="contrast"] {
+  --st-bg0: #000000; --st-bg1: #000000; --st-base0: #111111; --st-base1: #0a0a0a; --st-base-line: #ffffff; --st-screw: #8c8c8c;
+  --st-disc: rgba(0, 0, 0, 1); --st-disc-line: rgba(255, 255, 255, .6); --st-track: rgba(255, 255, 255, .1);
+  --st-emit: #222222; --st-emit-line: #ffffff; --st-axis: #444444; --st-blend: lighter;
+  --hud: #ffffff; --hud-strong: #ffd400; --hud-shadow: #000000; --hud-dim: #c4c4c4;
+}
+.hud { color: var(--hud); text-shadow: 0 0 4px var(--hud-shadow); }
+.hud b { color: var(--hud-strong); }
+.hud2 { color: var(--hud-dim); }

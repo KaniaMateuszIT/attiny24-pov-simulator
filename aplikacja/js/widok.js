@@ -36,6 +36,20 @@ export class StandView {
     this.mapKey = '';
   }
 
+  // kolory widoku z bieżącego motywu (zmienne --st-* w style.css); null = odczytaj ponownie
+  themeColors() {
+    if (!this.colors) {
+      const cs = getComputedStyle(document.documentElement);
+      const v = (n) => cs.getPropertyValue('--st-' + n).trim();
+      this.colors = {
+        bg0: v('bg0'), bg1: v('bg1'), base0: v('base0'), base1: v('base1'), baseLine: v('base-line'), screw: v('screw'),
+        disc: v('disc'), discLine: v('disc-line'), track: v('track'), emit: v('emit'), emitLine: v('emit-line'), axis: v('axis'),
+        blend: v('blend') || 'lighter',
+      };
+    }
+    return this.colors;
+  }
+
   ringRadius(i) {
     return this.R * (R_IN + i * R_STEP);
   }
@@ -80,14 +94,15 @@ export class StandView {
     const key = `${this.w}x${this.h}:${cfg.pa0Inner}`;
     if (key !== this.mapKey) this.buildMap(cfg.pa0Inner);
     const ctx = this.ctx, R = this.R, cx = this.cx, cy = this.cy;
+    const K = this.themeColors();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
     ctx.filter = 'none';
     // tło
     const bg = ctx.createRadialGradient(cx, cy, R * 0.2, cx, cy, Math.max(this.w, this.h) * 0.75);
-    bg.addColorStop(0, '#171c26');
-    bg.addColorStop(1, '#090b10');
+    bg.addColorStop(0, K.bg0);
+    bg.addColorStop(1, K.bg1);
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, this.w, this.h);
 
@@ -100,20 +115,20 @@ export class StandView {
   }
 
   drawBase(stand) {
-    const ctx = this.ctx, R = this.R, cx = this.cx, cy = this.cy;
+    const ctx = this.ctx, R = this.R, cx = this.cx, cy = this.cy, K = this.colors;
     // obudowa / podstawa
     ctx.beginPath();
     ctx.arc(cx, cy, R * 1.1, 0, TAU);
     const g = ctx.createRadialGradient(cx, cy, R * 0.9, cx, cy, R * 1.1);
-    g.addColorStop(0, '#1d232f');
-    g.addColorStop(1, '#141922');
+    g.addColorStop(0, K.base0);
+    g.addColorStop(1, K.base1);
     ctx.fillStyle = g;
     ctx.fill();
     ctx.lineWidth = Math.max(1, R * 0.006);
-    ctx.strokeStyle = '#2b3342';
+    ctx.strokeStyle = K.baseLine;
     ctx.stroke();
     // śruby
-    ctx.fillStyle = '#323a49';
+    ctx.fillStyle = K.screw;
     for (let k = 0; k < 6; k++) {
       const a = k / 6 * TAU + 0.26;
       ctx.beginPath();
@@ -123,16 +138,16 @@ export class StandView {
   }
 
   drawDisc(stand) {
-    const ctx = this.ctx, R = this.R, cx = this.cx, cy = this.cy;
+    const ctx = this.ctx, R = this.R, cx = this.cx, cy = this.cy, K = this.colors;
     ctx.beginPath();
     ctx.arc(cx, cy, R, 0, TAU);
-    ctx.fillStyle = 'rgba(14,18,26,0.96)';
+    ctx.fillStyle = K.disc;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(120,140,170,0.18)';
+    ctx.strokeStyle = K.discLine;
     ctx.lineWidth = Math.max(1, R * 0.004);
     ctx.stroke();
     // delikatne pierścienie torów diod
-    ctx.strokeStyle = 'rgba(120,140,170,0.05)';
+    ctx.strokeStyle = K.track;
     for (let i = 0; i < 8; i++) {
       ctx.beginPath();
       ctx.arc(cx, cy, this.ringRadius(i), 0, TAU);
@@ -217,7 +232,7 @@ export class StandView {
     ctx.arc(Math.sin(pa) * pr, -Math.cos(pa) * pr, R * 0.018, 0, TAU);
     ctx.fill();
     // oś
-    ctx.fillStyle = '#2a2f3a';
+    ctx.fillStyle = this.colors.axis;
     ctx.beginPath();
     ctx.arc(0, 0, R * 0.03, 0, TAU);
     ctx.fill();
@@ -242,7 +257,7 @@ export class StandView {
         ctx.fill();
         if (b > 0) {
           ctx.globalAlpha = alpha * Math.min(1, 0.25 + b);
-          ctx.globalCompositeOperation = 'lighter';
+          ctx.globalCompositeOperation = this.colors.blend;
           const g = ctx.createRadialGradient(x, y, 0, x, y, ledR * 3.2);
           g.addColorStop(0, `rgba(${col[0]},${col[1]},${col[2]},${Math.min(1, b * 1.2)})`);
           g.addColorStop(0.35, `rgba(${col[0]},${col[1]},${col[2]},${0.35 * b})`);
@@ -265,6 +280,7 @@ export class StandView {
     const norm = NB / stand.exposure;
     const c1 = cfg.colors[0], c2 = cfg.colors[1];
     const P = this.mPix, A = this.mPa, B = this.mBin, W = this.mW;
+    const additive = this.colors.blend === 'lighter';
     for (let i = 0; i < P.length; i++) {
       const bin = B[i], pa = A[i];
       let r = E[pa * NB + bin] * norm, g = E[(8 + pa) * NB + bin] * norm;
@@ -275,9 +291,11 @@ export class StandView {
       const R_ = (c1[0] * r + c2[0] * g) * w, G_ = (c1[1] * r + c2[1] * g) * w, B_ = (c1[2] * r + c2[2] * g) * w;
       const o = P[i];
       const m = Math.max(R_, G_, B_);
-      data[o] = Math.min(255, R_ * 1.1);
-      data[o + 1] = Math.min(255, G_ * 1.1);
-      data[o + 2] = Math.min(255, B_ * 1.1);
+      if (m <= 0) continue;
+      const k = additive ? 1.1 : 255 / m;   // na jasnym tle kolor pełny, jasność tylko w kanale alfa
+      data[o] = Math.min(255, R_ * k);
+      data[o + 1] = Math.min(255, G_ * k);
+      data[o + 2] = Math.min(255, B_ * k);
       data[o + 3] = Math.min(255, m * 1.4);
     }
     this.lctx.putImageData(this.img, 0, 0);
@@ -294,9 +312,9 @@ export class StandView {
     this.gctx.imageSmoothingEnabled = true;
     this.gctx.drawImage(this.light, 0, 0, gs, gs);
     ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalCompositeOperation = this.colors.blend;
     ctx.imageSmoothingEnabled = true;
-    ctx.globalAlpha = 0.85;
+    ctx.globalAlpha = additive ? 0.85 : 0.5;
     ctx.drawImage(this.glow, x, y, Sd, Sd);
     ctx.globalAlpha = 1;
     ctx.drawImage(this.light, x, y, Sd, Sd);
@@ -304,14 +322,14 @@ export class StandView {
   }
 
   drawSensor(stand) {
-    const ctx = this.ctx, R = this.R;
+    const ctx = this.ctx, R = this.R, K = this.colors;
     const a = stand.cfg.sensorAngle * TAU;
     ctx.save();
     ctx.translate(this.cx, this.cy);
     ctx.rotate(a);
     // nadajnik światła (nieruchomy) nad krawędzią talerza
-    ctx.fillStyle = '#2a3140';
-    ctx.strokeStyle = '#46506a';
+    ctx.fillStyle = K.emit;
+    ctx.strokeStyle = K.emitLine;
     ctx.lineWidth = Math.max(1, R * 0.004);
     ctx.beginPath();
     ctx.roundRect(-R * 0.045, -R * 1.13, R * 0.09, R * 0.09, R * 0.012);
@@ -323,7 +341,7 @@ export class StandView {
     ctx.arc(0, -R * 1.06, R * 0.012, 0, TAU);
     ctx.fill();
     if (!blocked) {
-      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalCompositeOperation = K.blend;
       const g = ctx.createLinearGradient(0, -R * 1.05, 0, -R * 0.92);
       g.addColorStop(0, 'rgba(255,90,90,0.35)');
       g.addColorStop(1, 'rgba(255,90,90,0)');

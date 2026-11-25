@@ -1058,7 +1058,8 @@ function applyTheme(name) {
   else document.documentElement.dataset.theme = t;
   $('#theme').value = t;
   store.set('theme', t);
-  analyzer.colors = null;            // analizator czyta kolory motywu z CSS
+  analyzer.colors = null;            // analizator i widok stanowiska czytają kolory motywu z CSS
+  view.colors = null;
   analyzer.draw();
 }
 
