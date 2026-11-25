@@ -41,6 +41,11 @@ programs at home – and see what the board would actually show, not just pin st
 - **POV rendering as the eye sees it** – rings, text and animations appear only when timing is right.
 - Live **schematic** with logic levels on every net.
 
+**Your language, your colours**
+- Interface in **English or Polish** – switch with the PL / EN buttons at the top (help, console messages,
+  diagnostics and compiler hints are translated too). The browser language is used on first start.
+- Four **colour themes**: Dark, Light, Ocean and High contrast.
+
 **Debugging and insight**
 - Pause, step by line (F10) or instruction (F11), breakpoints, registers with named bits, variables,
   RAM/stack map, EEPROM view, disassembly listing.
@@ -62,7 +67,8 @@ Requirements: **Windows 10/11** and **Edge or Chrome**. No installation – the 
 Closing the console window stops the simulator. If port 8024 is busy, the server picks the next free one
 (8024–8043) and prints the address.
 
-Tip: `http://localhost:8024/#przyklad=02_licznik.cpp` opens and uploads a given example directly.
+Tip: the address can preselect an example, language and theme, e.g.
+`http://localhost:8024/#przyklad=02_licznik.cpp&lang=en&theme=light`.
 
 ## Examples
 
@@ -101,6 +107,7 @@ aplikacja/js/
   widok.js          board rendering            schemat.js     live schematic
   bascom.js         BASCOM → C translator      kompilacja.js  build results (hex, symbols, lines)
   analizator.js     logic analyzer             wykorzystanie.js  CPU utilization profiler
+  i18n.js, en.js    PL / EN interface switch and the English dictionary
   main.js           UI: editor, upload, debugger, panels
 ```
 
@@ -111,8 +118,12 @@ Everything runs locally; the only reason for the server is to run the real compi
 - ADC, analog comparator, USI and Timer1 input capture are simplified (the lab board does not use them).
 - BASCOM: a subset of the language (listed in the **Pomoc** / Help tab); no `String` or `Print`;
   `Sub` / `Function` parameters are passed by value unless declared `Byref`.
-- The user interface is in **Polish** (it was built for a Polish lab course).
+- Comments in the bundled example programs are in Polish.
 - Windows only, because of the PowerShell server and the bundled Windows toolchain.
+
+## Author
+
+Created by **Mateusz Kania** for the Microprocessor Technology Lab at the Silesian University of Technology.
 
 ## License
 

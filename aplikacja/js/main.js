@@ -8,6 +8,10 @@ import { Analyzer, fmtTime } from './analizator.js';
 import { Editor } from './edytor.js';
 import { compileProgram, parseBuild, funcAt, FLASH_SIZE, RAM_SIZE } from './kompilacja.js';
 import { CpuUse } from './wykorzystanie.js';
+import { setLang as setUiLang, getLang, initialLang, onLangChange } from './i18n.js';
+
+const THEMES = ['dark', 'light', 'ocean', 'contrast'];
+const REPO_URL = 'https://github.com/KaniaMateuszIT/attiny24-pov-simulator';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -705,7 +709,8 @@ function frame(now) {
 }
 
 function fmtNum(x, d = 1) {
-  return x.toFixed(d).replace('.', ',');
+  const s = x.toFixed(d);
+  return getLang() === 'en' ? s : s.replace('.', ',');
 }
 
 function updateHud() {
@@ -773,8 +778,11 @@ function buildRegs() {
   regsBuilt = true;
 }
 
+// porównanie z ostatnio wpisanym tekstem, a nie z textContent - po angielsku
+// i18n.js podmienia treść i porównanie z nią dawałoby "zmianę" co odświeżenie
 function setText(el, t) {
-  if (el.textContent !== t) {
+  if (el._raw !== t) {
+    el._raw = t;
     el.textContent = t;
     el.classList.remove('chg');
     void el.offsetWidth;
@@ -876,7 +884,7 @@ function renderMem() {
       for (let k = 0; k < Math.min(v.size, 16); k++) bytes.push(D[v.addr + k]);
       const valEl = row.children[3], byEl = row.children[4];
       const txt = formatVar(v, bytes);
-      if (valEl.textContent !== txt) { valEl.textContent = txt; valEl.classList.remove('chg'); void valEl.offsetWidth; valEl.classList.add('chg'); }
+      if (valEl._raw !== txt) { valEl._raw = txt; valEl.textContent = txt; valEl.classList.remove('chg'); void valEl.offsetWidth; valEl.classList.add('chg'); }
       byEl.textContent = bytes.map(hex2).join(' ') + (v.size > 16 ? ' …' : '');
     });
   }
@@ -1042,6 +1050,41 @@ function confirmBox(title, text) {
   });
 }
 
+// ---------------------------------------------------------------- język, motyw, o programie
+
+function applyTheme(name) {
+  const t = THEMES.includes(name) ? name : 'dark';
+  if (t === 'dark') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = t;
+  $('#theme').value = t;
+  store.set('theme', t);
+  analyzer.colors = null;            // analizator czyta kolory motywu z CSS
+  analyzer.draw();
+}
+
+function applyUiLang(l) {
+  setUiLang(l);
+  store.set('uiLang', getLang());
+  for (const b of $$('#uiLangSeg button')) b.classList.toggle('on', b.dataset.uiLang === getLang());
+}
+
+function showAbout() {
+  const back = document.createElement('div');
+  back.className = 'modal-back';
+  back.innerHTML = `<div class="modal about no-i18n">
+    <h3><span class="chip-ico"></span>ATtiny24 POV <span data-ui="pl">– symulator</span><span data-ui="en">Simulator</span></h3>
+    <div class="who"><span data-ui="pl">Autor:</span><span data-ui="en">Author:</span> <b>Mateusz Kania</b></div>
+    <p data-ui="pl">Symulator stanowiska z Laboratorium techniki mikroprocesorowej (Politechnika Śląska): emulator ATtiny24 z dokładnością do cyklu, wirująca płytka POV, prawdziwy kompilator avr-gcc, tłumacz BASCOM-AVR i debuger.</p>
+    <p data-ui="en">A simulator of the Microprocessor Technology Lab board (Silesian University of Technology): a cycle-accurate ATtiny24 emulator, a spinning POV board, the real avr-gcc compiler, a BASCOM-AVR translator and a debugger.</p>
+    <p><span data-ui="pl">Kod źródłowy (licencja MIT):</span><span data-ui="en">Source code (MIT license):</span> <a href="${REPO_URL}" target="_blank" rel="noopener">${REPO_URL.replace('https://', '')}</a></p>
+    <p class="note" data-ui="pl">Dołączone oprogramowanie:</p><p class="note" data-ui="en">Bundled software:</p>
+    <ul><li>avr-gcc 7.3.0, GNU Binutils – GPL</li><li>avr-libc – BSD</li><li>ATTinyCore 1.5.2 (Arduino) – LGPL</li></ul>
+    <div class="actions"><button class="btn primary" data-close><span data-ui="pl">Zamknij</span><span data-ui="en">Close</span></button></div>
+  </div>`;
+  back.onclick = (e) => { if (e.target === back || e.target.closest('[data-close]')) back.remove(); };
+  document.body.append(back);
+}
+
 // ---------------------------------------------------------------- sterowanie stanowiskiem
 
 function setMotor(on) {
@@ -1186,6 +1229,9 @@ function bindUi() {
     setLang(app.lang, TEMPLATES[app.lang]);
     saveSource();
   };
+  for (const b of $$('#uiLangSeg button')) b.onclick = () => applyUiLang(b.dataset.uiLang);
+  $('#theme').onchange = (e) => applyTheme(e.target.value);
+  $('#btnAbout').onclick = showAbout;
   $('#btnOpen').onclick = () => $('#fileInput').click();
   $('#fileInput').onchange = (e) => { const f = e.target.files[0]; if (f) openFromDisk(f); e.target.value = ''; };
   $('#btnSave').onclick = saveToDisk;
@@ -1217,6 +1263,11 @@ function bindUi() {
 // ---------------------------------------------------------------- start
 
 async function boot() {
+  // adres może narzucić motyw i język, np. index.html#theme=light&lang=en
+  const hp = new URLSearchParams(location.hash.slice(1));
+  applyTheme(hp.get('theme') || store.get('theme', 'dark'));
+  applyUiLang(hp.get('lang') || initialLang(store.get('uiLang')));
+  onLangChange(() => { refreshPanels(true); analyzer.draw(); updateHud(); });
   bindUi();
   bindControls();
   bindSplitters();
@@ -1227,7 +1278,7 @@ async function boot() {
   showTab('right', store.get('rightTab', 'schem'));
   showTab('left', store.get('leftTab', 'console'));
   setLang(app.lang);
-  log('Symulator ATtiny24 – stanowisko LTM. Kompilator: avr-gcc 7.3.0 (jak w PlatformIO), rdzeń Arduino ATtiny.', 'info');
+  log('Symulator ATtiny24 – stanowisko LTM. Kompilator: avr-gcc 7.3.0 (jak w PlatformIO), rdzeń Arduino ATtiny. Autor: Mateusz Kania.', 'info');
   const ok = await pingServer();
   if (!ok) {
     log('Brak połączenia z serwerem symulatora – kompilacja nie zadziała. Uruchom symulator plikiem Symulator.bat.', 'err');

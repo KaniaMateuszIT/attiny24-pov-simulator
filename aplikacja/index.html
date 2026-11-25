@@ -28,6 +28,13 @@
   </div>
   <div class="spacer"></div>
   <div class="status" id="status">Uruchamianie…</div>
+  <div class="seg" id="uiLangSeg" title="Język interfejsu">
+    <button data-ui-lang="pl">PL</button><button data-ui-lang="en">EN</button>
+  </div>
+  <select id="theme" class="btn" title="Motyw kolorystyczny">
+    <option value="dark">Ciemny</option><option value="light">Jasny</option><option value="ocean">Morski</option><option value="contrast">Wysoki kontrast</option>
+  </select>
+  <button id="btnAbout" class="btn icon" title="O programie i autorze">ⓘ</button>
 </header>
 
 <main class="layout">
@@ -111,6 +118,8 @@
           <label class="chk"><input type="checkbox" id="redOpposite" checked> Gałęzie Led1/Led2 na przeciwnych ramionach</label>
           <div class="ctl col"><span>Kolory gałęzi</span>
             <select id="colors"><option value="rg">Led1 (T1) czerwone, Led2 (T2) zielone</option><option value="gr">Led1 zielone, Led2 czerwone</option><option value="ww">obie białe</option></select></div>
+
+          <div class="credits">Autor: <b>Mateusz Kania</b></div>
         </aside>
       </div>
     </div>
@@ -132,7 +141,7 @@
       <div class="tab-body" data-body="cpu"><div class="cpuuse" id="cpuuse"></div></div>
       <div class="tab-body" data-body="fuses"><div class="fuses" id="fuses"></div></div>
       <div class="tab-body" data-body="help">
-        <div class="help">
+        <div class="help no-i18n" data-ui="pl">
           <h3>Szybki start</h3>
           <ol>
             <li>Wybierz przykład z listy u góry albo napisz własny program (język: <b>C / C++</b> jak w PlatformIO albo <b>BASCOM</b> jak w skrypcie do zajęć).</li>
@@ -205,6 +214,90 @@
 
           <h3>Jak dokładny jest symulator?</h3>
           <p>Emulator wykonuje kod maszynowy z pliku .hex instrukcja po instrukcji, z dokładnością do cyklu zegara (rdzeń AVR bez mnożenia sprzętowego, jak w ATtiny24). Odwzorowane są porty z pull-upami, Timer0 i Timer1 we wszystkich trybach (z PWM i rejestrem TEMP), INT0, PCINT, watchdog, EEPROM, uśpienie, preskaler zegara i fusebity. Kompilator i biblioteka Arduino są te same co w PlatformIO, więc rozmiary programów i ich zachowanie zgadzają się z płytką. Uproszczone są: ADC, komparator analogowy i USI (nieużywane na stanowisku).</p>
+
+          <h3>O programie</h3>
+          <p>Autor: <b>Mateusz Kania</b>. Symulator powstał na potrzeby Laboratorium techniki mikroprocesorowej (Politechnika Śląska). Kod źródłowy (licencja MIT): <a href="https://github.com/KaniaMateuszIT/attiny24-pov-simulator" target="_blank" rel="noopener">github.com/KaniaMateuszIT/attiny24-pov-simulator</a>.</p>
+          <p class="note">Dołączone oprogramowanie: avr-gcc 7.3.0 i GNU Binutils (GPL), avr-libc (BSD), ATTinyCore (LGPL) – szczegóły w pliku THIRD_PARTY_NOTICES.md.</p>
+        </div>
+
+        <div class="help no-i18n" data-ui="en">
+          <h3>Quick start</h3>
+          <ol>
+            <li>Pick an example from the list at the top or write your own program (language: <b>C / C++</b> as in PlatformIO, or <b>BASCOM</b> as in the lab handout).</li>
+            <li>Click <b>Upload</b> (F5) – the program is compiled with the real avr-gcc 7.3.0 compiler (the one PlatformIO uses) and “flashed” into the simulated ATtiny24.</li>
+            <li>Turn on the <b>motor</b> in the right-hand panel to spin the board – you will see the POV image the way the eye sees it.</li>
+            <li>Pause the program (F8), step through it (F10 / F11), set breakpoints (click a line number) and watch registers, variables and pin waveforms.</li>
+          </ol>
+
+          <h3>The lab board</h3>
+          <table>
+            <tr><th>Pin</th><th>No.</th><th>Connection</th></tr>
+            <tr><td><code>PA0…PA7</code></td><td>13…6</td><td>LED anodes; each line drives two LEDs: LED1x in branch Led1 and LED2x in branch Led2 (cathodes through 1 kΩ)</td></tr>
+            <tr><td><code>PB0</code></td><td>2</td><td>gate of T1 (BS170) – turns on branch <b>Led1</b> (red arm)</td></tr>
+            <tr><td><code>PB1</code></td><td>3</td><td>gate of T2 (BS170) – turns on branch <b>Led2</b> (green arm)</td></tr>
+            <tr><td><code>PB2</code></td><td>5</td><td>photodiode with a 1 kΩ pull-up (RD) to VCC; <b>logic low = marker detected</b>; also the <code>INT0</code> interrupt input</td></tr>
+            <tr><td><code>PB3</code></td><td>4</td><td>RESET (1 kΩ to VCC, push button to ground)</td></tr>
+          </table>
+          <p>An LED lights up when its PAx line is high <b>and</b> the transistor of its branch conducts. The branches sit on opposite arms of the spinning board, with PA0 near the centre. Clock: internal 8 MHz RC oscillator (fuses <code>L:E2 H:D7 E:FF</code>).</p>
+
+          <h3>Debugging</h3>
+          <ul>
+            <li><b>Breakpoint</b> – click a line number in the editor. The program stops before executing that line.</li>
+            <li><b>Step line</b> (F10) – runs to the next line of your code; <b>Step</b> (F11) – one machine instruction (Assembly tab).</li>
+            <li><b>Speed</b> – slow the simulation down (1/100, 1/1000) to see the arm “paint” the image column by column.</li>
+            <li><b>Registers</b> – CPU and I/O registers with named bits. <b>Variables &amp; memory</b> – global variable values, RAM map (data, stack), EEPROM.</li>
+            <li><b>Analyzer</b> – timing diagrams of all pins plus an “in interrupt” channel. Drag with the mouse to measure time.</li>
+            <li><b>CPU usage</b> – how much time goes to the main program, interrupts, <code>delay()</code> busy-waiting and sleep, per function and per line.</li>
+            <li><b>Schematic</b> – wire colours show the state: red = 1, blue = 0, dashed orange = pull-up, dashed grey = floating pin.</li>
+          </ul>
+
+          <h3>Common ATtiny24 pitfalls</h3>
+          <ul>
+            <li>Only <b>2 KB of flash and 128 B of RAM</b> – keep large constant tables in flash (<code>const … PROGMEM</code> + <code>pgm_read_byte</code>). The stack grows down from 0xDF and can run into your variables.</li>
+            <li>Interrupt vectors: <code>INT0_vect</code>, <code>PCINT0_vect</code>, <code>PCINT1_vect</code>, <code>WDT_vect</code>, <code>TIM1_CAPT_vect</code>, <code>TIM1_COMPA_vect</code>, <code>TIM1_COMPB_vect</code>, <code>TIM1_OVF_vect</code>, <code>TIM0_COMPA_vect</code>, <code>TIM0_COMPB_vect</code>, <code>TIM0_OVF_vect</code>. An enabled interrupt without an ISR = program restart.</li>
+            <li>Variables changed in an interrupt must be <code>volatile</code>; read multi-byte variables with interrupts disabled (<code>cli()</code> … <code>sei()</code>).</li>
+            <li>Arduino pin numbers in the ATtiny core are “reversed” (pin 0 = PB0, pin 3 = PA7, pin 10 = PA0) – that is why the lab uses the <code>DDRx</code>, <code>PORTx</code>, <code>PINx</code> registers.</li>
+            <li>A pin set as an input with <code>PORTx = 1</code> has its pull-up on – an LED on it glows very dimly.</li>
+            <li><code>delay()</code> and <code>millis()</code> do not work inside an interrupt (interrupts are disabled there).</li>
+            <li>Writing a one to <code>PINx</code> toggles the bit in <code>PORTx</code> (<code>PINA = _BV(PA0)</code> flips PA0).</li>
+          </ul>
+
+          <h3>BASCOM-AVR in the simulator</h3>
+          <p>A BASIC program is translated to C (the “C code from BASIC” tab) and compiled with avr-gcc. A subset of the language is supported:</p>
+          <div class="cols">
+            <p><code>$regfile</code>, <code>$crystal</code>, <code>$hwstack</code> …<br>
+            <code>Dim … As Bit|Byte|Integer|Word|Long|Dword|Single</code>, arrays <code>Dim T(10) As Byte</code> (1-based index)<br>
+            <code>Const</code>, <code>Alias</code> (e.g. <code>Led Alias Portb.0</code>)<br>
+            <code>Config Porta = Output</code>, <code>Config Portb.0 = Output</code>, <code>Config Portb = &amp;B00001011</code><br>
+            <code>Config Timer0|Timer1 = Timer|Pwm|Counter, Prescale = …, Clear Timer = 1, Compare A = …</code><br>
+            <code>Config Int0 = Falling|Rising|Change|Low Level</code>, <code>Config Watchdog = 16…8192</code>, <code>Config Adc</code><br>
+            <code>On Int0|Timer0|Timer1|Compare1a|Compare1b|Compare0a|Pcint0|Pcint1|Capture1|Wdt Label</code><br>
+            <code>Enable</code> / <code>Disable</code> (… <code>Interrupts</code>), <code>Start</code> / <code>Stop Timer0|Timer1|Watchdog</code>, <code>Reset Watchdog</code></p>
+            <p><code>If … Then … Elseif … Else … End If</code> (also single-line)<br>
+            <code>Do … Loop [Until|While]</code>, <code>While … Wend</code>, <code>For … To … [Step] … Next</code>, <code>Exit For|Do|While|Sub</code><br>
+            <code>Select Case</code> with <code>Case 1, 2</code>, <code>Case 3 To 5</code>, <code>Case Is &gt; 7</code>, <code>Case Else</code><br>
+            <code>Gosub</code> / <code>Return</code>, <code>Goto</code>, <code>Sub</code> / <code>Function</code> (<code>Byval</code>, <code>Byref</code>), <code>Call</code>, <code>Local</code><br>
+            <code>Waitms</code>, <code>Waitus</code>, <code>Wait</code>, <code>Set</code>, <code>Reset</code>, <code>Toggle</code>, <code>Incr</code>, <code>Decr</code>, <code>Shift</code>, <code>Rotate</code>, <code>Swap</code>, <code>Bitwait</code>, <code>Debounce</code><br>
+            <code>Data</code> + <code>Lookup(i, Label)</code>, <code>Restore</code> + <code>Read</code>, <code>Readeeprom</code> / <code>Writeeeprom</code>, <code>Idle</code>, <code>Powerdown</code><br>
+            functions: <code>Low</code>, <code>High</code>, <code>Abs</code>, <code>Rnd</code>, <code>Getadc</code>, <code>Bits</code>, <code>Nbits</code>, <code>Makeint</code>, <code>Max</code>, <code>Min</code>; operators <code>And Or Xor Not Mod</code><br>
+            registers by name: <code>Porta</code>, <code>Pinb.2</code>, <code>Timer1</code>, <code>Compare1a</code>, <code>Tifr1.tov1</code>, …</p>
+          </div>
+          <p class="note">Differences from BASCOM: procedure parameters are passed by value by default (write <code>Byref</code> for a reference); there is no String type and no Print (the ATtiny24 has no UART).</p>
+
+          <h3>Keyboard shortcuts</h3>
+          <table>
+            <tr><td><code>F5</code></td><td>Compile and upload</td><td><code>F7</code></td><td>Compile</td></tr>
+            <tr><td><code>F8</code></td><td>Pause / resume</td><td><code>F10</code> / <code>F11</code></td><td>Step line / step instruction</td></tr>
+            <tr><td><code>Ctrl+S</code></td><td>Save file</td><td><code>Ctrl+/</code></td><td>Comment / uncomment</td></tr>
+            <tr><td><code>Tab</code> / <code>Shift+Tab</code></td><td>Indent</td><td><code>Ctrl+Z</code></td><td>Undo</td></tr>
+          </table>
+
+          <h3>How accurate is the simulator?</h3>
+          <p>The emulator executes the machine code from the .hex file instruction by instruction, accurate to the clock cycle (an AVR core without a hardware multiplier, like the ATtiny24). It models ports with pull-ups, Timer0 and Timer1 in all modes (with PWM and the TEMP register), INT0, PCINT, the watchdog, EEPROM, sleep, the clock prescaler and fuse bits. The compiler and Arduino library are the same as in PlatformIO, so program sizes and behaviour match the real board. Simplified: ADC, analog comparator and USI (not used on the lab board).</p>
+
+          <h3>About</h3>
+          <p>Author: <b>Mateusz Kania</b>. Built for the Microprocessor Technology Lab (Silesian University of Technology). Source code (MIT license): <a href="https://github.com/KaniaMateuszIT/attiny24-pov-simulator" target="_blank" rel="noopener">github.com/KaniaMateuszIT/attiny24-pov-simulator</a>.</p>
+          <p class="note">Bundled software: avr-gcc 7.3.0 and GNU Binutils (GPL), avr-libc (BSD), ATTinyCore (LGPL) – see THIRD_PARTY_NOTICES.md.</p>
         </div>
       </div>
     </div>

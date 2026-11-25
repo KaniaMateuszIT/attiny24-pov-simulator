@@ -5,6 +5,7 @@
 // dzielony na: program główny, przerwania, czekanie (delay/millis) i uśpienie.
 
 import { VECTOR_NAMES, FLASH_WORDS } from './avr.js';
+import { getLang } from './i18n.js';
 
 const SNAP_EVERY = 0.25;    // [s czasu symulacji] co ile zapamiętywać stan liczników
 const WINDOW = 1;           // [s] okno "ostatnia sekunda"
@@ -19,7 +20,10 @@ const CATS = [
   { key: 'sleep', name: 'Uśpienie (sleep)', color: '#2f3a4e' },
 ];
 
-const pct = (x) => (x * 100).toFixed(x < 0.1 ? 1 : 0).replace('.', ',') + '%';
+const pct = (x) => {
+  const s = (x * 100).toFixed(x < 0.1 ? 1 : 0);
+  return (getLang() === 'en' ? s : s.replace('.', ',')) + '%';
+};
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 export class CpuUse {
@@ -68,10 +72,14 @@ export class CpuUse {
       '<div class="cu-head"><div class="cu-big"><b id="cuBig">–</b> wykorzystania procesora</div>' +
       '<select id="cuMode"><option value="last">ostatnia sekunda</option><option value="all">od wgrania programu</option></select></div>' +
       '<div class="cu-bar" id="cuBar"></div><div class="cu-legend" id="cuLegend"></div>' +
-      '<div class="note cu-note">Mikrokontroler nigdy nie stoi – jeśli nie śpi, wykonuje instrukcje z pełną szybkością. ' +
+      '<div class="note cu-note no-i18n"><span data-ui="pl">Mikrokontroler nigdy nie stoi – jeśli nie śpi, wykonuje instrukcje z pełną szybkością. ' +
       '<b>Wykorzystanie</b> to czas na program główny i przerwania. Czas w <code>delay()</code> i <code>millis()</code> to aktywne czekanie: ' +
       'procesor kręci się w pętli bez pożytecznej pracy, więc liczy się jako zapas, tak samo jak uśpienie. ' +
-      'Pętla <code>loop()</code>, która ciągle odpytuje port albo zmienną, zużywa 100% – zapas dają dopiero przerwania i sleep.</div>' +
+      'Pętla <code>loop()</code>, która ciągle odpytuje port albo zmienną, zużywa 100% – zapas dają dopiero przerwania i sleep.</span>' +
+      '<span data-ui="en">A microcontroller never stands still – unless it sleeps, it executes instructions at full speed. ' +
+      '<b>Utilization</b> is the time spent in the main program and interrupts. Time in <code>delay()</code> and <code>millis()</code> is busy-waiting: ' +
+      'the CPU spins in a loop doing nothing useful, so it counts as spare capacity, just like sleep. ' +
+      'A <code>loop()</code> that keeps polling a port or a variable uses 100% – only interrupts and sleep free the CPU.</span></div>' +
       '<h5>Funkcje</h5><table class="vars" id="cuFuncs"></table>' +
       '<h5>Linie programu</h5><table class="vars" id="cuLines"></table>';
     this.root.querySelector('#cuMode').onchange = (e) => { this.mode = e.target.value; };

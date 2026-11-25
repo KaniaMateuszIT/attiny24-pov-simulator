@@ -1,5 +1,7 @@
 // analizator.js - analizator stanów logicznych pinów ATtiny24
 
+import { tr } from './i18n.js';
+
 const N = 1 << 18;
 const CHANNELS = [
   ['PA0', 0], ['PA1', 1], ['PA2', 2], ['PA3', 3], ['PA4', 4], ['PA5', 5], ['PA6', 6], ['PA7', 7],
@@ -92,6 +94,16 @@ export class Analyzer {
 
   get labelW() { return 118; }
 
+  // kolory tła i opisów z bieżącego motywu (zmienne --an-* w style.css)
+  themeColors() {
+    if (!this.colors) {
+      const cs = getComputedStyle(document.documentElement);
+      const v = (n) => cs.getPropertyValue('--an-' + n).trim();
+      this.colors = { bg: v('bg'), bg2: v('bg2'), grid: v('grid'), text: v('text'), label: v('label'), cursor: v('cursor'), cursorLine: v('cursor-line') };
+    }
+    return this.colors;
+  }
+
   setLive(on) {
     this.live = on;
     this.liveBtn.classList.toggle('on', on);
@@ -161,8 +173,9 @@ export class Analyzer {
       this.canvas.style.width = W + 'px'; this.canvas.style.height = H + 'px';
     }
     const ctx = this.ctx;
+    const K = this.themeColors();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = '#0d1016';
+    ctx.fillStyle = K.bg;
     ctx.fillRect(0, 0, W, H);
     const LW = this.labelW, top = 22;
     const rowH = Math.max(16, Math.min(30, (H - top - 4) / CHANNELS.length));
@@ -175,9 +188,9 @@ export class Analyzer {
     ctx.textAlign = 'center';
     for (let t = Math.ceil(t0 / step) * step; t <= t1; t += step) {
       const x = X(t);
-      ctx.fillStyle = '#1b212c';
+      ctx.fillStyle = K.grid;
       ctx.fillRect(Math.round(x), top, 1, H - top);
-      ctx.fillStyle = '#6b778a';
+      ctx.fillStyle = K.text;
       ctx.fillText(fmtTime(t), x, 14);
     }
     // kanały
@@ -187,11 +200,11 @@ export class Analyzer {
       const [name, bit] = CHANNELS[c];
       const y = top + c * rowH;
       const hiY = y + 4, loY = y + rowH - 4;
-      ctx.fillStyle = c % 2 ? '#10141b' : '#0d1016';
+      ctx.fillStyle = c % 2 ? K.bg2 : K.bg;
       ctx.fillRect(0, y, W, rowH);
-      ctx.fillStyle = '#9aa6b8';
+      ctx.fillStyle = K.label;
       ctx.textAlign = 'left';
-      ctx.fillText(name, 8, y + rowH / 2 + 4);
+      ctx.fillText(tr(name), 8, y + rowH / 2 + 4);
       const col = bit < 8 ? COLORS.pa : bit < 12 ? COLORS.pb : COLORS.isr;
       ctx.strokeStyle = col;
       ctx.fillStyle = col + '55';
@@ -223,7 +236,7 @@ export class Analyzer {
       ctx.lineTo(endX, val ? hiY : loY);
       ctx.stroke();
     }
-    ctx.fillStyle = '#1b212c';
+    ctx.fillStyle = K.grid;
     ctx.fillRect(LW - 1, top, 1, H - top);
     // pomiar
     if (this.measure && this.measure.b !== null) {
@@ -240,9 +253,9 @@ export class Analyzer {
     }
     // kursor
     if (this.hover !== null) {
-      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.fillStyle = K.cursorLine;
       ctx.fillRect(this.hover, top, 1, H - top);
-      ctx.fillStyle = '#e6edf6';
+      ctx.fillStyle = K.cursor;
       ctx.textAlign = 'left';
       ctx.fillText(fmtTime(this.timeAt(this.hover)), this.hover + 4, top + 10);
     }
